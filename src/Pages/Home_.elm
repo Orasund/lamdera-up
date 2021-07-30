@@ -5,7 +5,7 @@ import Api.Article.Filters as Filters
 import Api.Data exposing (Data)
 import Api.User exposing (User)
 import Bridge exposing (..)
-import Components.ArticleList
+import Element
 import Html exposing (..)
 import Html.Attributes exposing (class, classList)
 import Html.Events as Events
@@ -14,6 +14,7 @@ import Request exposing (Request)
 import Shared
 import Utils.Maybe
 import View exposing (View)
+import View.ArticleList
 
 
 page : Shared.Model -> Request -> Page.With Model Msg
@@ -200,30 +201,39 @@ view : Shared.Model -> Model -> View Msg
 view shared model =
     { title = ""
     , body =
-        [ div [ class "home-page" ]
-            [ div [ class "banner" ]
-                [ div [ class "container" ]
-                    [ h1 [ class "logo-font" ] [ text "conduit" ]
-                    , p [] [ text "A place to share your knowledge." ]
-                    ]
-                ]
-            , div [ class "container page" ]
-                [ div [ class "row" ]
-                    [ div [ class "col-md-9" ] <|
-                        (viewTabs shared model
-                            :: Components.ArticleList.view
-                                { user = shared.user
-                                , articleListing = model.listing
-                                , onFavorite = ClickedFavorite
-                                , onUnfavorite = ClickedUnfavorite
-                                , onPageClick = ClickedPage
-                                }
-                        )
-                    , div [ class "col-md-3" ] [ viewTags model.tags ]
-                    ]
-                ]
+        [ div [ class "container" ]
+            [ h1 [ class "logo-font" ] [ text "conduit" ]
+            , p [] [ text "A place to share your knowledge." ]
             ]
+            |> Element.html
+            |> Element.el
+                [ Element.htmlAttribute <| class "banner"
+                , Element.width <| Element.fill
+                ]
+        , div [ class "row" ]
+            [ div [ class "col-md-9" ] <|
+                (viewTabs shared model
+                    :: View.ArticleList.view
+                        { user = shared.user
+                        , articleListing = model.listing
+                        , onFavorite = ClickedFavorite
+                        , onUnfavorite = ClickedUnfavorite
+                        , onPageClick = ClickedPage
+                        }
+                )
+            , div [ class "col-md-3" ] [ viewTags model.tags ]
+            ]
+            |> Element.html
+            |> Element.el
+                [ Element.htmlAttribute <| class "container page"
+                , Element.width <| Element.fill
+                ]
         ]
+            |> Element.column
+                [ Element.htmlAttribute <| class "home-page"
+                , Element.width Element.fill
+                , Element.height Element.fill
+                ]
     }
 
 

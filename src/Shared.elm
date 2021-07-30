@@ -10,13 +10,15 @@ module Shared exposing
 
 import Api.User exposing (User)
 import Bridge exposing (..)
-import Components.Footer
-import Components.Navbar
+import Browser.Navigation as Navigation
+import Element exposing (Element)
+import Gen.Route as Route exposing (Route)
 import Html exposing (..)
 import Html.Attributes exposing (class, href, rel)
 import Request exposing (Request)
 import Utils.Route
 import View exposing (View)
+import View.Navbar
 
 
 
@@ -46,10 +48,11 @@ init _ json =
 type Msg
     = ClickedSignOut
     | SignedInUser User
+    | RequestedRouteChange Route
 
 
 update : Request -> Msg -> Model -> ( Model, Cmd Msg )
-update _ msg model =
+update req msg model =
     case msg of
         SignedInUser user ->
             ( { model | user = Just user }
@@ -60,6 +63,9 @@ update _ msg model =
             ( { model | user = Nothing }
             , model.user |> Maybe.map (\user -> sendToBackend (SignedOut user)) |> Maybe.withDefault Cmd.none
             )
+
+        RequestedRouteChange route ->
+            ( model, Request.pushRoute route req )
 
 
 subscriptions : Request -> Model -> Sub Msg
@@ -85,19 +91,19 @@ view req { page, toMsg } model =
             page.title ++ " | Conduit"
     , body =
         css
-            ++ [ div [ class "layout" ]
-                    [ Components.Navbar.view
-                        { user = model.user
-                        , currentRoute = Utils.Route.fromUrl req.url
-                        , onSignOut = toMsg ClickedSignOut
-                        }
-                    , div [ class "page" ] page.body
-                    , Components.Footer.view
-                    ]
+            ++ [ View.Navbar.view
+                    { user = model.user
+                    , currentRoute = Utils.Route.fromUrl req.url
+                    , onSignOut = toMsg ClickedSignOut
+                    , msgMapper = RequestedRouteChange >> toMsg
+                    }
+               , page.body
                ]
+            |> Element.column [ Element.width <| Element.fill, Element.height <| Element.fill ]
     }
 
 
+css : List (Element msg)
 css =
     -- Import Ionicon icons & Google Fonts our Bootstrap theme relies on
     [ Html.node "link" [ rel "stylesheet", href "//code.ionicframework.com/ionicons/2.0.1/css/ionicons.min.css" ] []
@@ -107,3 +113,4 @@ css =
     , Html.node "link" [ rel "stylesheet", href "//demo.productionready.io/main.css" ] []
     , Html.node "link" [ rel "stylesheet", href "/style.css" ] []
     ]
+        |> List.map Element.html

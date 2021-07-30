@@ -1,4 +1,4 @@
-module Components.ErrorList exposing (view)
+module View.ErrorList exposing (view)
 
 import Html exposing (..)
 import Html.Attributes exposing (class)

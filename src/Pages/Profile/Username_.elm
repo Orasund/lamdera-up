@@ -6,9 +6,7 @@ import Api.Data exposing (Data)
 import Api.Profile exposing (Profile)
 import Api.User exposing (User)
 import Bridge exposing (..)
-import Components.ArticleList
-import Components.IconButton as IconButton
-import Components.NotFound
+import Element exposing (Element)
 import Gen.Params.Profile.Username_ exposing (Params)
 import Html exposing (..)
 import Html.Attributes exposing (class, classList, src)
@@ -18,6 +16,9 @@ import Request
 import Shared
 import Utils.Maybe
 import View exposing (View)
+import View.ArticleList
+import View.IconButton as IconButton
+import View.NotFound
 
 
 page : Shared.Model -> Request.With Params -> Page.With Model Msg
@@ -212,17 +213,17 @@ view shared model =
     , body =
         case model.profile of
             Api.Data.Success profile ->
-                [ viewProfile shared profile model ]
+                viewProfile shared profile model
 
             Api.Data.Failure _ ->
-                [ Components.NotFound.view ]
+                View.NotFound.view
 
             _ ->
-                []
+                Element.none
     }
 
 
-viewProfile : Shared.Model -> Profile -> Model -> Html Msg
+viewProfile : Shared.Model -> Profile -> Model -> Element Msg
 viewProfile shared profile model =
     let
         isViewingOwnProfile : Bool
@@ -297,7 +298,7 @@ viewProfile shared profile model =
             [ div [ class "row" ]
                 [ div [ class "col-xs-12 col-md-10 offset-md-1" ]
                     (viewTabRow
-                        :: Components.ArticleList.view
+                        :: View.ArticleList.view
                             { user = shared.user
                             , articleListing = model.listing
                             , onFavorite = ClickedFavorite
@@ -308,3 +309,4 @@ viewProfile shared profile model =
                 ]
             ]
         ]
+        |> Element.html

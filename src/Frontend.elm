@@ -4,6 +4,8 @@ import Browser
 import Browser.Dom
 import Browser.Navigation as Nav exposing (Key)
 import Effect
+import Element
+import ElmSpa.Page exposing (Page)
 import Gen.Model
 import Gen.Pages as Pages
 import Gen.Route as Route
@@ -151,6 +153,11 @@ view model =
         , toMsg = Shared
         }
         model.shared
+        |> (\document ->
+                { title = document.title
+                , body = document.body |> Element.layout [] |> List.singleton
+                }
+           )
 
 
 

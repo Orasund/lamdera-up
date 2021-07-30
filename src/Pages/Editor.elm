@@ -4,13 +4,13 @@ import Api.Article exposing (Article)
 import Api.Data exposing (Data)
 import Api.User exposing (User)
 import Bridge exposing (..)
-import Components.Editor exposing (Field, Form)
 import Gen.Route as Route
 import Page
 import Request exposing (Request)
 import Shared
 import Utils.Route
 import View exposing (View)
+import View.Editor exposing (Field, Form)
 
 
 page : Shared.Model -> Request -> Page.With Model Msg
@@ -64,7 +64,7 @@ update req msg model =
         Updated field value ->
             ( { model
                 | form =
-                    Components.Editor.updateField
+                    View.Editor.updateField
                         field
                         value
                         model.form
@@ -113,7 +113,7 @@ view : User -> Model -> View Msg
 view user model =
     { title = "New Article"
     , body =
-        [ Components.Editor.view
+        View.Editor.view
             { onFormSubmit = SubmittedForm user
             , title = "New Article"
             , form = model.form
@@ -121,5 +121,4 @@ view user model =
             , buttonLabel = "Publish"
             , article = model.article
             }
-        ]
     }

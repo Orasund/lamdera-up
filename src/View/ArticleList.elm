@@ -1,14 +1,14 @@
-module Components.ArticleList exposing (view)
+module View.ArticleList exposing (view)
 
 import Api.Article exposing (Article)
 import Api.Data exposing (Data)
 import Api.User exposing (User)
-import Components.IconButton as IconButton
 import Html exposing (..)
 import Html.Attributes exposing (alt, class, classList, href, src)
 import Html.Events as Events
 import Utils.Maybe
 import Utils.Time
+import View.IconButton as IconButton
 
 
 view :

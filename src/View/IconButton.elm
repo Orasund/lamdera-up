@@ -1,4 +1,4 @@
-module Components.IconButton exposing (Color(..), Icon(..), view)
+module View.IconButton exposing (Color(..), Icon(..), view)
 
 import Html exposing (..)
 import Html.Attributes exposing (class)

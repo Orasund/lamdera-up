@@ -3,14 +3,15 @@ module Pages.Register exposing (Model, Msg(..), page)
 import Api.Data exposing (Data)
 import Api.User exposing (User)
 import Bridge exposing (..)
-import Components.UserForm
 import Effect exposing (Effect)
-import Gen.Route as Route
+import Element
+import Gen.Route as Route exposing (Route)
 import Page
 import Request exposing (Request)
 import Shared
 import Utils.Route
 import View exposing (View)
+import View.UserForm
 
 
 page : Shared.Model -> Request -> Page.With Model Msg
@@ -60,6 +61,7 @@ type Msg
     = Updated Field String
     | AttemptedSignUp
     | GotUser (Data User)
+    | RequestedRouteChange Route
 
 
 type Field
@@ -113,6 +115,9 @@ update req msg model =
                     , Effect.none
                     )
 
+        RequestedRouteChange route ->
+            ( model, Shared.RequestedRouteChange route |> Effect.fromShared )
+
 
 subscriptions : Model -> Sub Msg
 subscriptions _ =
@@ -127,7 +132,7 @@ view : Model -> View Msg
 view model =
     { title = "Sign up"
     , body =
-        [ Components.UserForm.view
+        View.UserForm.view
             { user = model.user
             , label = "Sign up"
             , onFormSubmit = AttemptedSignUp
@@ -149,6 +154,6 @@ view model =
                   , onInput = Updated Password
                   }
                 ]
+            , msgMapper = RequestedRouteChange
             }
-        ]
     }

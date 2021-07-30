@@ -1,10 +1,11 @@
-module Components.NotFound exposing (view)
+module View.NotFound exposing (view)
 
+import Element exposing (Element)
 import Html exposing (..)
 import Html.Attributes exposing (class, href)
 
 
-view : Html msg
+view : Element msg
 view =
     div [ class "container page" ]
         [ h2 [] [ text "Page not found." ]
@@ -14,3 +15,4 @@ view =
             , text "!"
             ]
         ]
+        |> Element.html

@@ -3,8 +3,8 @@ module Pages.Settings exposing (Model, Msg(..), page)
 import Api.Data exposing (Data)
 import Api.User exposing (User)
 import Bridge exposing (..)
-import Components.ErrorList
 import Effect exposing (Effect)
+import Element
 import Html exposing (..)
 import Html.Attributes exposing (attribute, class, placeholder, type_, value)
 import Html.Events as Events
@@ -13,6 +13,7 @@ import Request exposing (Request)
 import Shared
 import Utils.Maybe
 import View exposing (View)
+import View.ErrorList
 
 
 page : Shared.Model -> Request -> Page.With Model Msg
@@ -145,13 +146,13 @@ view : User -> Model -> View Msg
 view user model =
     { title = "Settings"
     , body =
-        [ div [ class "settings-page" ]
+        div [ class "settings-page" ]
             [ div [ class "container page" ]
                 [ div [ class "row" ]
                     [ div [ class "col-md-6 offset-md-3 col-xs-12" ]
                         [ h1 [ class "text-xs-center" ] [ text "Your Settings" ]
                         , br [] []
-                        , Components.ErrorList.view model.errors
+                        , View.ErrorList.view model.errors
                         , Utils.Maybe.view model.message <|
                             \message ->
                                 p [ class "text-success" ] [ text message ]
@@ -214,5 +215,5 @@ view user model =
                     ]
                 ]
             ]
-        ]
+            |> Element.html
     }

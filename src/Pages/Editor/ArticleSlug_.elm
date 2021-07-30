@@ -4,7 +4,7 @@ import Api.Article exposing (Article)
 import Api.Data exposing (Data)
 import Api.User exposing (User)
 import Bridge exposing (..)
-import Components.Editor exposing (Field, Form)
+import Element
 import Gen.Params.Editor.ArticleSlug_ exposing (Params)
 import Gen.Route as Route
 import Html exposing (..)
@@ -13,6 +13,7 @@ import Request
 import Shared
 import Utils.Route
 import View exposing (View)
+import View.Editor exposing (Field, Form)
 
 
 page : Shared.Model -> Request.With Params -> Page.With Model Msg
@@ -86,7 +87,7 @@ update req msg model =
             ( { model
                 | form =
                     Maybe.map
-                        (Components.Editor.updateField field value)
+                        (View.Editor.updateField field value)
                         model.form
               }
             , Cmd.none
@@ -136,7 +137,7 @@ view user model =
     , body =
         case model.form of
             Just form ->
-                [ Components.Editor.view
+                View.Editor.view
                     { onFormSubmit = SubmittedForm user form
                     , title = "Edit Article"
                     , form = form
@@ -144,8 +145,7 @@ view user model =
                     , buttonLabel = "Save"
                     , article = model.article
                     }
-                ]
 
             Nothing ->
-                []
+                Element.none
     }

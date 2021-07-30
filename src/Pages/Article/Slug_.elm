@@ -6,9 +6,9 @@ import Api.Data exposing (Data)
 import Api.Profile exposing (Profile)
 import Api.User exposing (User)
 import Bridge exposing (..)
-import Components.IconButton as IconButton
+import Element exposing (Element)
 import Gen.Params.Article.Slug_ exposing (Params)
-import Gen.Route as Route
+import Gen.Route as Route exposing (Route)
 import Html exposing (..)
 import Html.Attributes exposing (attribute, class, href, placeholder, src, value)
 import Html.Events as Events
@@ -20,6 +20,7 @@ import Utils.Maybe
 import Utils.Route
 import Utils.Time
 import View exposing (View)
+import View.IconButton as IconButton
 
 
 page : Shared.Model -> Request.With Params -> Page.With Model Msg
@@ -218,43 +219,52 @@ view shared model =
     case model.article of
         Api.Data.Success article ->
             { title = article.title
-            , body = [ viewArticle shared model article ]
+            , body = viewArticle shared model article
             }
 
         _ ->
             { title = "Article"
-            , body = []
+            , body = Element.none
             }
 
 
-viewArticle : Shared.Model -> Model -> Article -> Html Msg
+viewArticle : Shared.Model -> Model -> Article -> Element Msg
 viewArticle shared model article =
-    div [ class "article-page" ]
-        [ div [ class "banner" ]
-            [ div [ class "container" ]
-                [ h1 [] [ text article.title ]
-                , viewArticleMeta shared model article
-                ]
-            ]
-        , div [ class "container page" ]
-            [ div [ class "row article-content" ]
-                [ div [ class "col-md-12" ]
-                    [ Markdown.toHtml [] article.body ]
-                , if List.isEmpty article.tags then
-                    text ""
-
-                  else
-                    ul [ class "tag-list" ]
-                        (List.map
-                            (\tag -> li [ class "tag-default tag-pill tag-outline" ] [ text tag ])
-                            article.tags
-                        )
-                ]
-            , hr [] []
-            , div [ class "article-actions" ] [ viewArticleMeta shared model article ]
-            , viewCommentSection shared model article
-            ]
+    [ div [ class "container" ]
+        [ h1 [] [ text article.title ]
+        , viewArticleMeta shared model article
         ]
+        |> Element.html
+        |> Element.el
+            [ Element.width <| Element.fill
+            , Element.htmlAttribute <| class "banner"
+            ]
+    , [ div [ class "row article-content" ]
+            [ div [ class "col-md-12" ]
+                [ Markdown.toHtml [] article.body ]
+            , if List.isEmpty article.tags then
+                text ""
+
+              else
+                ul [ class "tag-list" ]
+                    (List.map
+                        (\tag -> li [ class "tag-default tag-pill tag-outline" ] [ text tag ])
+                        article.tags
+                    )
+            ]
+            |> Element.html
+      , hr [] [] |> Element.html
+      , div [ class "article-actions" ] [ viewArticleMeta shared model article ]
+            |> Element.html
+      , viewCommentSection shared model article
+      ]
+        |> Element.column
+            [ class "container page" |> Element.htmlAttribute
+            ]
+    ]
+        |> Element.column
+            [ class "article-page" |> Element.htmlAttribute
+            ]
 
 
 viewArticleMeta : Shared.Model -> Model -> Article -> Html Msg
@@ -330,25 +340,26 @@ viewControls article user =
         ]
 
 
-viewCommentSection : Shared.Model -> Model -> Article -> Html Msg
+viewCommentSection : Shared.Model -> Model -> Article -> Element Msg
 viewCommentSection shared model article =
-    div [ class "row" ]
-        [ div [ class "col-xs-12 col-md-8 offset-md-2" ] <|
-            List.concat
-                [ case shared.user of
-                    Just user ->
-                        [ viewCommentForm model user article ]
-
-                    Nothing ->
-                        []
-                , case model.comments of
-                    Api.Data.Success comments ->
-                        List.map (viewComment shared.user article) comments
-
-                    _ ->
-                        []
+    List.concat
+        [ case shared.user of
+            Just user ->
+                [ viewCommentForm model user article
+                    |> Element.html
                 ]
+
+            Nothing ->
+                []
+        , case model.comments of
+            Api.Data.Success comments ->
+                List.map (viewComment shared.user article) comments
+
+            _ ->
+                []
         ]
+        |> Element.row [ class "col-xs-12 col-md-8 offset-md-2" |> Element.htmlAttribute ]
+        |> Element.el [ class "row" |> Element.htmlAttribute ]
 
 
 viewCommentForm : Model -> User -> Article -> Html Msg
@@ -371,7 +382,7 @@ viewCommentForm model user article =
         ]
 
 
-viewComment : Maybe User -> Article -> Comment -> Html Msg
+viewComment : Maybe User -> Article -> Comment -> Element Msg
 viewComment currentUser article comment =
     let
         viewCommentActions =
@@ -402,3 +413,4 @@ viewComment currentUser article comment =
             , viewCommentActions
             ]
         ]
+        |> Element.html
