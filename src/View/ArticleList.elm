@@ -62,10 +62,7 @@ viewArticlePreview :
 viewArticlePreview options article =
     div [ class "article-preview" ]
         [ div [ class "article-meta" ]
-            [ a [ href ("/profile/" ++ article.author.username) ]
-                [ img [ src article.author.image, alt article.author.username ] []
-                ]
-            , div [ class "info" ]
+            [ div [ class "info" ]
                 [ a [ class "author", href ("/profile/" ++ article.author.username) ] [ text article.author.username ]
                 , span [ class "date" ] [ text (Utils.Time.formatDate article.createdAt) ]
                 ]

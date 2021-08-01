@@ -2,7 +2,11 @@ module View.UserForm exposing (Field, view)
 
 import Api.Data exposing (Data)
 import Api.User exposing (User)
+import Color
+import Config.View
 import Element exposing (Element)
+import Element.Background as Background
+import Element.Border as Border
 import Element.Input as Input
 import Gen.Route as Route exposing (Route)
 import Html exposing (..)
@@ -11,6 +15,7 @@ import Html.Events as Events
 import View.Color as Color
 import View.ErrorList
 import Widget
+import Widget.Customize as Customize
 import Widget.Material as Material
 import Widget.Material.Typography as Typography
 
@@ -33,14 +38,18 @@ view :
     }
     -> Element msg
 view options =
-    [ [ Element.text options.label |> Element.el Typography.h2
+    [ [ Element.text options.label
+            |> Element.el
+                Typography.h2
       , Widget.textButton (Material.textButton Color.palette)
             { text = options.alternateLink.label
             , onPress = Just <| options.msgMapper <| options.alternateLink.route
             }
+            |> Element.el [ Element.centerX ]
       ]
         |> Element.column
             [ Element.spacing 8
+            , Element.centerX
             ]
     , options.fields
         |> List.map viewField
@@ -53,28 +62,63 @@ view options =
 
         _ ->
             Element.text ""
-    , Widget.textButton (Material.containedButton Color.palette)
+    , Widget.textButton
+        (Material.containedButton Color.palette)
         { text = options.label
         , onPress = Just options.onFormSubmit
         }
+        |> Element.el [ Element.alignRight ]
     ]
         |> Element.column
-            [ Element.centerX
-            , Element.centerY
-            , Element.spacing 16
-            ]
+            (Material.cardAttributes Color.palette
+                ++ [ Element.spacing Config.View.spacing
+                   , Border.rounded Config.View.rounded
+                   , Element.padding Config.View.padding
+                   , Element.width Element.shrink
+                   , Element.centerX
+                   , Element.centerY
+                   ]
+            )
 
 
 viewField : Field msg -> Element msg
 viewField options =
-    Widget.textInput (Material.textInput Color.palette)
-        { chips = []
-        , text = options.value
-        , placeholder =
-            options.label
-                |> Element.text
-                |> Input.placeholder []
-                |> Just
-        , label = options.label
-        , onChange = options.onInput
-        }
+    case options.type_ of
+        "password" ->
+            Widget.currentPasswordInputV2 (Material.passwordInput Color.palette)
+                { text = options.value
+                , placeholder =
+                    options.label
+                        |> Element.text
+                        |> Input.placeholder []
+                        |> Just
+                , label = options.label
+                , onChange = options.onInput
+                , show = False
+                }
+
+        "email" ->
+            Widget.emailInput (Material.textInput Color.palette)
+                { chips = []
+                , text = options.value
+                , placeholder =
+                    options.label
+                        |> Element.text
+                        |> Input.placeholder []
+                        |> Just
+                , label = options.label
+                , onChange = options.onInput
+                }
+
+        _ ->
+            Widget.textInput (Material.textInput Color.palette)
+                { chips = []
+                , text = options.value
+                , placeholder =
+                    options.label
+                        |> Element.text
+                        |> Input.placeholder []
+                        |> Just
+                , label = options.label
+                , onChange = options.onInput
+                }

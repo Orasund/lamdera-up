@@ -34,7 +34,7 @@ app =
         { init = init
         , update = update
         , updateFromFrontend = updateFromFrontend
-        , subscriptions = \m -> onConnect CheckSession
+        , subscriptions = subscriptions
         }
 
 
@@ -125,6 +125,13 @@ update msg model =
 
         NoOpBackendMsg ->
             ( model, Cmd.none )
+
+        AddPoints int ->
+            ( { model
+                | users = model.users |> Dict.map (\_ user -> { user | points = user.points + 1 })
+              }
+            , Cmd.none
+            )
 
 
 updateFromFrontend : SessionId -> ClientId -> ToBackend -> Model -> ( Model, Cmd BackendMsg )
@@ -389,7 +396,7 @@ updateFromFrontend sessionId clientId msg model =
                                 , email = params.email
                                 , username = params.username
                                 , bio = Nothing
-                                , image = "https://static.productionready.io/images/smiley-cyrus.jpg"
+                                , points = 0
                                 , password = params.password
                                 , favorites = []
                                 , following = []
@@ -407,18 +414,25 @@ updateFromFrontend sessionId clientId msg model =
                 ( model_, res ) =
                     case model |> getSessionUser sessionId of
                         Just user ->
-                            let
-                                user_ =
-                                    { user
-                                        | username = params.username
+                            if
+                                (params.oldPassword == Nothing)
+                                    || (params.oldPassword == Just user.password)
+                            then
+                                let
+                                    user_ =
+                                        { user
+                                            | username = params.username
+                                            , email = params.email
+                                            , password =
+                                                params.newPassword
+                                                    |> Maybe.withDefault user.password
+                                            , bio = Just params.bio
+                                        }
+                                in
+                                ( model |> updateUser user_, Success (Api.User.toUser user_) )
 
-                                        -- , email = params.email
-                                        , password = params.password |> Maybe.withDefault user.password
-                                        , image = params.image
-                                        , bio = Just params.bio
-                                    }
-                            in
-                            ( model |> updateUser user_, Success (Api.User.toUser user_) )
+                            else
+                                ( model, Failure [ "Old password is incorrect" ] )
 
                         Nothing ->
                             ( model, Failure [ "you do not have permission for this user" ] )
@@ -598,7 +612,12 @@ loadArticleFromStore model userM store =
             model.users
                 |> Dict.get store.userId
                 |> Maybe.map Api.User.toProfile
-                |> Maybe.withDefault { username = "error: unknown user", bio = Nothing, image = "", following = False }
+                |> Maybe.withDefault
+                    { username = "error: unknown user"
+                    , bio = Nothing
+                    , following = False
+                    , points = 0
+                    }
     in
     { slug = store.slug
     , title = store.title
@@ -611,3 +630,24 @@ loadArticleFromStore model userM store =
     , favoritesCount = model.users |> Dict.filter (\_ user -> user.favorites |> List.member store.slug) |> Dict.size
     , author = author
     }
+
+
+subscriptions : Model -> Sub BackendMsg
+subscriptions m =
+    let
+        second =
+            1000
+
+        minute =
+            60 * second
+
+        hour =
+            60 * minute
+
+        day =
+            24 * hour
+    in
+    Sub.batch
+        [ onConnect CheckSession
+        , Time.every (7 * day) (always <| AddPoints 1)
+        ]

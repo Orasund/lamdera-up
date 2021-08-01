@@ -3,8 +3,10 @@ module Frontend exposing (..)
 import Browser
 import Browser.Dom
 import Browser.Navigation as Nav exposing (Key)
+import Color
 import Effect
 import Element
+import Element.Background as Background
 import ElmSpa.Page exposing (Page)
 import Gen.Model
 import Gen.Pages as Pages
@@ -16,6 +18,7 @@ import Task
 import Types exposing (FrontendModel, FrontendMsg(..), ToFrontend(..))
 import Url exposing (Url)
 import View
+import View.Color as Color
 
 
 type alias Model =
@@ -155,7 +158,16 @@ view model =
         model.shared
         |> (\document ->
                 { title = document.title
-                , body = document.body |> Element.layout [] |> List.singleton
+                , body =
+                    document.body
+                        |> Element.layout
+                            [ Color.palette.secondary
+                                |> Color.toRgba
+                                |> Element.fromRgb
+                                |> Background.color
+                            , Element.height Element.fill
+                            ]
+                        |> List.singleton
                 }
            )
 

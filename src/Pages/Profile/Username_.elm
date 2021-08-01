@@ -6,7 +6,9 @@ import Api.Data exposing (Data)
 import Api.Profile exposing (Profile)
 import Api.User exposing (User)
 import Bridge exposing (..)
+import Config.View
 import Element exposing (Element)
+import Element.Border as Border
 import Gen.Params.Profile.Username_ exposing (Params)
 import Html exposing (..)
 import Html.Attributes exposing (class, classList, src)
@@ -14,11 +16,12 @@ import Html.Events as Events
 import Page
 import Request
 import Shared
-import Utils.Maybe
 import View exposing (View)
-import View.ArticleList
-import View.IconButton as IconButton
+import View.Color as Color
 import View.NotFound
+import Widget
+import Widget.Material as Material
+import Widget.Material.Typography as Typography
 
 
 page : Shared.Model -> Request.With Params -> Page.With Model Msg
@@ -230,42 +233,6 @@ viewProfile shared profile model =
         isViewingOwnProfile =
             Maybe.map .username shared.user == Just profile.username
 
-        viewUserInfo : Html Msg
-        viewUserInfo =
-            div [ class "user-info" ]
-                [ div [ class "container" ]
-                    [ div [ class "row" ]
-                        [ div [ class "col-xs-12 col-md-10 offset-md-1" ]
-                            [ img [ class "user-img", src profile.image ] []
-                            , h4 [] [ text profile.username ]
-                            , Utils.Maybe.view profile.bio
-                                (\bio -> p [] [ text bio ])
-                            , if isViewingOwnProfile then
-                                text ""
-
-                              else
-                                Utils.Maybe.view shared.user <|
-                                    \user ->
-                                        if profile.following then
-                                            IconButton.view
-                                                { color = IconButton.FilledGray
-                                                , icon = IconButton.Plus
-                                                , label = "Unfollow " ++ profile.username
-                                                , onClick = ClickedUnfollow user profile
-                                                }
-
-                                        else
-                                            IconButton.view
-                                                { color = IconButton.OutlinedGray
-                                                , icon = IconButton.Plus
-                                                , label = "Follow " ++ profile.username
-                                                , onClick = ClickedFollow user profile
-                                                }
-                            ]
-                        ]
-                    ]
-                ]
-
         viewTabRow : Html Msg
         viewTabRow =
             div [ class "articles-toggle" ]
@@ -292,21 +259,16 @@ viewProfile shared profile model =
                     ]
                 ]
     in
-    div [ class "profile-page" ]
-        [ viewUserInfo
-        , div [ class "container" ]
-            [ div [ class "row" ]
-                [ div [ class "col-xs-12 col-md-10 offset-md-1" ]
-                    (viewTabRow
-                        :: View.ArticleList.view
-                            { user = shared.user
-                            , articleListing = model.listing
-                            , onFavorite = ClickedFavorite
-                            , onUnfavorite = ClickedUnfavorite
-                            , onPageClick = ClickedPage
-                            }
-                    )
-                ]
-            ]
-        ]
-        |> Element.html
+    [ Element.text profile.username |> Element.el Typography.h2
+    , profile.bio |> Maybe.map Element.text |> Maybe.withDefault Element.none
+    , Element.text <| "Points: " ++ String.fromInt profile.points
+    ]
+        |> Element.column
+            (Material.cardAttributes Color.palette
+                ++ [ Border.rounded Config.View.rounded
+                   , Element.padding Config.View.padding
+                   , Element.width <| Element.maximum Config.View.maxWidth <| Element.fill
+                   , Element.centerX
+                   , Element.centerY
+                   ]
+            )

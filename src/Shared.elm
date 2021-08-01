@@ -11,13 +11,16 @@ module Shared exposing
 import Api.User exposing (User)
 import Bridge exposing (..)
 import Browser.Navigation as Navigation
+import Color
 import Element exposing (Element)
+import Element.Background as Background
 import Gen.Route as Route exposing (Route)
 import Html exposing (..)
 import Html.Attributes exposing (class, href, rel)
 import Request exposing (Request)
 import Utils.Route
 import View exposing (View)
+import View.Color as Color
 import View.Navbar
 
 
@@ -99,7 +102,10 @@ view req { page, toMsg } model =
                     }
                , page.body
                ]
-            |> Element.column [ Element.width <| Element.fill, Element.height <| Element.fill ]
+            |> Element.column
+                [ Element.width <| Element.fill
+                , Element.height <| Element.fill
+                ]
     }
 
 

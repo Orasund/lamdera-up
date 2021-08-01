@@ -28,9 +28,9 @@ view options =
 
         menu =
             case options.user of
-                Just _ ->
+                Just user ->
                     [ ( "New Article", Route.Editor )
-                    , ( "Settings", Route.Settings )
+                    , ( "Profil", Route.Profile__Username_ { username = user.username } )
                     ]
 
                 Nothing ->
@@ -87,7 +87,11 @@ view options =
         , primaryActions =
             case options.user of
                 Just _ ->
-                    [ { text = "Sign out"
+                    [ { text = "Settings"
+                      , icon = always Element.none
+                      , onPress = Just <| options.msgMapper Route.Settings
+                      }
+                    , { text = "Sign out"
                       , icon = always Element.none
                       , onPress = Just <| options.onSignOut
                       }

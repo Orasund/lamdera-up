@@ -52,6 +52,7 @@ type BackendMsg
     | ArticleCreated Time.Posix (Maybe UserFull) ClientId { title : String, description : String, body : String, tags : List String }
     | ArticleCommentCreated Time.Posix (Maybe UserFull) ClientId Slug { body : String }
     | NoOpBackendMsg
+    | AddPoints Int
 
 
 type ToFrontend

@@ -10,4 +10,7 @@ palette =
         p =
             Material.defaultPalette
     in
-    { p | primary = Color.rgb255 92 184 92 }
+    { p
+        | primary = Color.rgb255 92 184 92
+        , secondary = Color.rgb255 133 233 255
+    }

@@ -10,6 +10,6 @@ module Api.Profile exposing (Profile)
 type alias Profile =
     { username : String
     , bio : Maybe String
-    , image : String
     , following : Bool
+    , points : Int
     }

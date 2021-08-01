@@ -48,8 +48,8 @@ type ToBackend
         { params :
             { username : String
             , email : String
-            , password : Maybe String
-            , image : String
+            , oldPassword : Maybe String
+            , newPassword : Maybe String
             , bio : String
             }
         }

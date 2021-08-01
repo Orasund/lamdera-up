@@ -3,8 +3,11 @@ module Pages.Settings exposing (Model, Msg(..), page)
 import Api.Data exposing (Data)
 import Api.User exposing (User)
 import Bridge exposing (..)
+import Config.View
 import Effect exposing (Effect)
 import Element
+import Element.Border as Border
+import Element.Input as Input
 import Html exposing (..)
 import Html.Attributes exposing (attribute, class, placeholder, type_, value)
 import Html.Events as Events
@@ -13,7 +16,13 @@ import Request exposing (Request)
 import Shared
 import Utils.Maybe
 import View exposing (View)
+import View.Color as Color
 import View.ErrorList
+import View.Input
+import Widget
+import Widget.Customize as Customize
+import Widget.Material as Material
+import Widget.Material.Typography as Typography
 
 
 page : Shared.Model -> Request -> Page.With Model Msg
@@ -33,11 +42,11 @@ page shared _ =
 
 
 type alias Model =
-    { image : String
-    , username : String
+    { username : String
     , bio : String
     , email : String
-    , password : Maybe String
+    , oldPassword : Maybe String
+    , newPassword : Maybe String
     , message : Maybe String
     , errors : List String
     }
@@ -47,21 +56,21 @@ init : Shared.Model -> ( Model, Effect Msg )
 init shared =
     ( case shared.user of
         Just user ->
-            { image = user.image
-            , username = user.username
+            { username = user.username
             , bio = user.bio |> Maybe.withDefault ""
             , email = user.email
-            , password = Nothing
+            , oldPassword = Nothing
+            , newPassword = Nothing
             , message = Nothing
             , errors = []
             }
 
         Nothing ->
-            { image = ""
-            , username = ""
+            { username = ""
             , bio = ""
             , email = ""
-            , password = Nothing
+            , newPassword = Nothing
+            , oldPassword = Nothing
             , message = Nothing
             , errors = []
             }
@@ -80,19 +89,16 @@ type Msg
 
 
 type Field
-    = Image
-    | Username
+    = Username
     | Bio
     | Email
-    | Password
+    | NewPassword
+    | OldPassword
 
 
 update : Msg -> Model -> ( Model, Effect Msg )
 update msg model =
     case msg of
-        Updated Image value ->
-            ( { model | image = value }, Effect.none )
-
         Updated Username value ->
             ( { model | username = value }, Effect.none )
 
@@ -102,8 +108,11 @@ update msg model =
         Updated Email value ->
             ( { model | email = value }, Effect.none )
 
-        Updated Password value ->
-            ( { model | password = Just value }, Effect.none )
+        Updated OldPassword value ->
+            ( { model | oldPassword = Just value }, Effect.none )
+
+        Updated NewPassword value ->
+            ( { model | newPassword = Just value }, Effect.none )
 
         SubmittedForm user ->
             ( { model | message = Nothing, errors = [] }
@@ -112,8 +121,8 @@ update msg model =
                     { params =
                         { username = model.username
                         , email = model.email
-                        , password = model.password
-                        , image = model.image
+                        , oldPassword = model.oldPassword
+                        , newPassword = model.newPassword
                         , bio = model.bio
                         }
                     }
@@ -146,74 +155,86 @@ view : User -> Model -> View Msg
 view user model =
     { title = "Settings"
     , body =
-        div [ class "settings-page" ]
-            [ div [ class "container page" ]
-                [ div [ class "row" ]
-                    [ div [ class "col-md-6 offset-md-3 col-xs-12" ]
-                        [ h1 [ class "text-xs-center" ] [ text "Your Settings" ]
-                        , br [] []
-                        , View.ErrorList.view model.errors
-                        , Utils.Maybe.view model.message <|
-                            \message ->
-                                p [ class "text-success" ] [ text message ]
-                        , form [ Events.onSubmit (SubmittedForm user) ]
-                            [ fieldset []
-                                [ fieldset [ class "form-group" ]
-                                    [ input
-                                        [ class "form-control"
-                                        , placeholder "URL of profile picture"
-                                        , type_ "text"
-                                        , value model.image
-                                        , Events.onInput (Updated Image)
-                                        ]
-                                        []
-                                    ]
-                                , fieldset [ class "form-group" ]
-                                    [ input
-                                        [ class "form-control form-control-lg"
-                                        , placeholder "Your Username"
-                                        , type_ "text"
-                                        , value model.username
-                                        , Events.onInput (Updated Username)
-                                        ]
-                                        []
-                                    ]
-                                , fieldset [ class "form-group" ]
-                                    [ textarea
-                                        [ class "form-control form-control-lg"
-                                        , placeholder "Short bio about you"
-                                        , attribute "rows" "8"
-                                        , value model.bio
-                                        , Events.onInput (Updated Bio)
-                                        ]
-                                        []
-                                    ]
-                                , fieldset [ class "form-group" ]
-                                    [ input
-                                        [ class "form-control form-control-lg"
-                                        , placeholder "Email"
-                                        , type_ "text"
-                                        , value model.email
-                                        , Events.onInput (Updated Email)
-                                        ]
-                                        []
-                                    ]
-                                , fieldset [ class "form-group" ]
-                                    [ input
-                                        [ class "form-control form-control-lg"
-                                        , placeholder "Password"
-                                        , type_ "password"
-                                        , value (Maybe.withDefault "" model.password)
-                                        , Events.onInput (Updated Password)
-                                        ]
-                                        []
-                                    ]
-                                , button [ class "btn btn-lg btn-primary pull-xs-right" ] [ text "Update Settings" ]
-                                ]
-                            ]
-                        ]
-                    ]
-                ]
+        [ Element.text "Your Settings"
+            |> Element.el (Typography.h2 ++ [ Element.centerX ])
+        , [ View.Input.textInput
+                { text = model.username
+                , label = "Your Username"
+                , onChange = Updated Username
+                }
+                |> View.Input.withLabel "Your Username"
+          , View.Input.multiLineInput
+                { text = model.bio
+                , label = "Short bio about you"
+                , onChange = Updated Bio
+                }
+                |> View.Input.withLabel "Short bio about you"
+          , View.Input.textInput
+                { text = model.email
+                , label = "Email"
+                , onChange = Updated Email
+                }
+                |> View.Input.withLabel "Email"
+          , [ Widget.currentPasswordInputV2
+                (Material.passwordInput Color.palette
+                    |> Customize.elementRow [ Element.width Element.fill ]
+                )
+                { text = Maybe.withDefault "" model.oldPassword
+                , placeholder =
+                    "Old Password"
+                        |> Element.text
+                        |> Input.placeholder []
+                        |> Just
+                , label = "Old Password"
+                , onChange = Updated OldPassword
+                , show = False
+                }
+            , Widget.newPasswordInputV2
+                (Material.passwordInput Color.palette
+                    |> Customize.elementRow [ Element.width Element.fill ]
+                )
+                { text = Maybe.withDefault "" model.newPassword
+                , placeholder =
+                    "New Password"
+                        |> Element.text
+                        |> Input.placeholder []
+                        |> Just
+                , label = "New Password"
+                , onChange = Updated NewPassword
+                , show = False
+                }
             ]
-            |> Element.html
+                |> Element.column
+                    [ Element.spacing Config.View.spacing
+                    , Element.width Element.fill
+                    ]
+                |> View.Input.withLabel "Change Password"
+          , View.ErrorList.view model.errors |> Element.html
+          , (\message ->
+                p [ class "text-success" ] [ text message ]
+            )
+                |> Utils.Maybe.view model.message
+                |> Element.html
+          , Widget.textButton (Material.containedButton Color.palette)
+                { text = "Update Settings"
+                , onPress = Just <| SubmittedForm user
+                }
+                |> Element.el [ Element.alignRight ]
+          ]
+            |> Element.column
+                [ Element.spacing Config.View.spacing
+                , Element.width Element.fill
+                ]
+        ]
+            |> Element.column
+                (Material.cardAttributes Color.palette
+                    ++ [ Element.spacing Config.View.spacing
+                       , Border.rounded Config.View.rounded
+                       , Element.padding Config.View.padding
+                       , Element.width Element.shrink
+                       , Element.centerX
+                       , Element.centerY
+                       , Element.width <| Element.maximum 1024 <| Element.fill
+                       ]
+                )
     }

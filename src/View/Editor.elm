@@ -7,12 +7,15 @@ module View.Editor exposing
 
 import Api.Article exposing (Article)
 import Api.Data exposing (Data)
+import Config.View
 import Element exposing (Element)
+import Element.Border as Border
 import Element.Input as Input
 import Html exposing (..)
 import Html.Attributes exposing (attribute, class, placeholder, type_, value)
 import Html.Events as Events
 import View.Color as Color
+import View.Input
 import Widget
 import Widget.Customize as Customize
 import Widget.Material as Material
@@ -50,45 +53,6 @@ updateField field value form =
             { form | tags = value }
 
 
-textInput : { label : String, text : String, onChange : String -> msg } -> Element msg
-textInput args =
-    Widget.textInput
-        (Material.textInput Color.palette
-            |> Customize.elementRow [ Element.width Element.fill ]
-        )
-        { chips = []
-        , text = args.text
-        , placeholder =
-            Element.text args.label
-                |> Input.placeholder []
-                |> Just
-        , label = args.label
-        , onChange = args.onChange
-        }
-
-
-multiLineInput : { label : String, text : String, onChange : String -> msg } -> Element msg
-multiLineInput args =
-    Input.multiline
-        ((Material.textInput Color.palette).elementRow
-            ++ [ Element.width Element.fill
-               , Element.padding 16
-               , Element.height <| Element.px 256
-               ]
-        )
-        { onChange = args.onChange
-        , text = args.text
-        , placeholder =
-            Element.text args.label
-                |> Input.placeholder []
-                |> Just
-        , label =
-            args.label
-                |> Input.labelHidden
-        , spellcheck = True
-        }
-
-
 view :
     { onFormSubmit : msg
     , title : String
@@ -105,35 +69,36 @@ view :
     -> Element msg
 view options =
     [ Element.text options.title |> Element.el Typography.h2
-    , [ textInput
+    , [ View.Input.textInput
             { text = options.form.title
             , label = "Article Title"
             , onChange = options.onUpdate Title
             }
-      , textInput
+      , View.Input.textInput
             { text = options.form.description
             , label = "What's this article about?"
             , onChange = options.onUpdate Description
             }
-      , multiLineInput
+      , View.Input.multiLineInput
             { onChange = options.onUpdate Body
             , text = options.form.body
             , label = "Write your article (in markdown)"
             }
-      , textInput
+      , View.Input.textInput
             { text = options.form.tags
             , label = "Enter tags (separated by commas)"
             , onChange = options.onUpdate Tags
             }
       ]
         |> Element.column
-            [ Element.spacing 16
+            [ Element.spacing Config.View.spacing
             , Element.width Element.fill
             ]
     , Widget.textButton (Material.containedButton Color.palette)
         { text = options.buttonLabel
         , onPress = Just options.onFormSubmit
         }
+        |> Element.el [ Element.alignRight ]
     , case options.article of
         Api.Data.Failure reasons ->
             ul [ class "error-messages" ]
@@ -144,9 +109,15 @@ view options =
             Element.text ""
     ]
         |> Element.column
-            [ Element.centerY
-            , Element.centerX
-            , Element.spacing 32
-            , Element.width <| Element.maximum 1024 <| Element.fill
-            , Element.paddingXY 64 0
-            ]
+            (Material.cardAttributes Color.palette
+                ++ [ Element.spacing Config.View.spacing
+                   , Border.rounded Config.View.rounded
+                   , Element.padding Config.View.padding
+                   , Element.width Element.shrink
+                   , Element.centerX
+                   , Element.centerY
+                   , Element.fill
+                        |> Element.maximum Config.View.maxWidth
+                        |> Element.width
+                   ]
+            )

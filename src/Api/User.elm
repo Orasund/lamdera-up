@@ -15,7 +15,7 @@ type alias User =
     , email : Email
     , username : String
     , bio : Maybe String
-    , image : String
+    , points : Int
     }
 
 
@@ -24,10 +24,10 @@ type alias UserFull =
     , email : Email
     , username : String
     , bio : Maybe String
-    , image : String
     , password : String
     , favorites : List Slug
     , following : List UserId
+    , points : Int
     }
 
 
@@ -41,7 +41,7 @@ toUser u =
     , email = u.email
     , username = u.username
     , bio = u.bio
-    , image = u.image
+    , points = u.points
     }
 
 
@@ -49,8 +49,8 @@ toProfile : UserFull -> Profile
 toProfile u =
     { username = u.username
     , bio = u.bio
-    , image = u.image
     , following = False
+    , points = u.points
     }
 
 

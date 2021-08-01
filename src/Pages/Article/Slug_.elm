@@ -6,26 +6,30 @@ import Api.Data exposing (Data)
 import Api.Profile exposing (Profile)
 import Api.User exposing (User)
 import Bridge exposing (..)
+import Config.View
+import Effect exposing (Effect)
 import Element exposing (Element)
 import Gen.Params.Article.Slug_ exposing (Params)
 import Gen.Route as Route exposing (Route)
 import Html exposing (..)
-import Html.Attributes exposing (attribute, class, href, placeholder, src, value)
-import Html.Events as Events
+import Html.Attributes exposing (class, href, src)
 import Markdown
 import Page
 import Request
 import Shared
-import Utils.Maybe
 import Utils.Route
 import Utils.Time
 import View exposing (View)
+import View.Color as Color
 import View.IconButton as IconButton
+import View.Input
+import Widget
+import Widget.Material as Material
 
 
 page : Shared.Model -> Request.With Params -> Page.With Model Msg
 page shared req =
-    Page.element
+    Page.advanced
         { init = init shared req
         , update = update req
         , subscriptions = subscriptions
@@ -44,7 +48,7 @@ type alias Model =
     }
 
 
-init : Shared.Model -> Request.With Params -> ( Model, Cmd Msg )
+init : Shared.Model -> Request.With Params -> ( Model, Effect Msg )
 init shared { params } =
     ( { article = Api.Data.Loading
       , comments = Api.Data.Loading
@@ -60,6 +64,7 @@ init shared { params } =
             }
             |> sendToBackend
         ]
+        |> Effect.fromCmd
     )
 
 
@@ -82,14 +87,15 @@ type Msg
     | SubmittedCommentForm User Article
     | CreatedComment (Data Comment)
     | UpdatedCommentText String
+    | RequestedRouteChange Route
 
 
-update : Request.With Params -> Msg -> Model -> ( Model, Cmd Msg )
+update : Request.With Params -> Msg -> Model -> ( Model, Effect Msg )
 update req msg model =
     case msg of
         GotArticle article ->
             ( { model | article = article }
-            , Cmd.none
+            , Effect.none
             )
 
         ClickedFavorite user article ->
@@ -98,6 +104,7 @@ update req msg model =
                 { slug = article.slug
                 }
                 |> sendToBackend
+                |> Effect.fromCmd
             )
 
         ClickedUnfavorite user article ->
@@ -106,6 +113,7 @@ update req msg model =
                 { slug = article.slug
                 }
                 |> sendToBackend
+                |> Effect.fromCmd
             )
 
         ClickedDeleteArticle user article ->
@@ -114,11 +122,13 @@ update req msg model =
                 { slug = article.slug
                 }
                 |> sendToBackend
+                |> Effect.fromCmd
             )
 
         DeletedArticle _ ->
             ( model
             , Utils.Route.navigate req.key Route.Home_
+                |> Effect.fromCmd
             )
 
         GotAuthor profile ->
@@ -133,7 +143,7 @@ update req msg model =
                             article
             in
             ( { model | article = Api.Data.map updateAuthor model.article }
-            , Cmd.none
+            , Effect.none
             )
 
         ClickedFollow user profile ->
@@ -142,6 +152,7 @@ update req msg model =
                 { username = profile.username
                 }
                 |> sendToBackend
+                |> Effect.fromCmd
             )
 
         ClickedUnfollow user profile ->
@@ -150,21 +161,22 @@ update req msg model =
                 { username = profile.username
                 }
                 |> sendToBackend
+                |> Effect.fromCmd
             )
 
         GotComments comments ->
             ( { model | comments = comments }
-            , Cmd.none
+            , Effect.none
             )
 
         UpdatedCommentText text ->
             ( { model | commentText = text }
-            , Cmd.none
+            , Effect.none
             )
 
         SubmittedCommentForm user article ->
             if String.isEmpty model.commentText then
-                ( model, Cmd.none )
+                ( model, Effect.none )
 
             else
                 ( { model | commentText = "" }
@@ -173,6 +185,7 @@ update req msg model =
                     , comment = { body = model.commentText }
                     }
                     |> sendToBackend
+                    |> Effect.fromCmd
                 )
 
         CreatedComment comment ->
@@ -182,7 +195,7 @@ update req msg model =
 
                 _ ->
                     model
-            , Cmd.none
+            , Effect.none
             )
 
         ClickedDeleteComment user article comment ->
@@ -192,6 +205,7 @@ update req msg model =
                 , commentId = comment.id
                 }
                 |> sendToBackend
+                |> Effect.fromCmd
             )
 
         DeletedComment id ->
@@ -201,8 +215,11 @@ update req msg model =
                     List.filter (\comment -> Api.Data.Success comment.id /= id)
             in
             ( { model | comments = Api.Data.map removeComment model.comments }
-            , Cmd.none
+            , Effect.none
             )
+
+        RequestedRouteChange route ->
+            ( model, Shared.RequestedRouteChange route |> Effect.fromShared )
 
 
 subscriptions : Model -> Sub Msg
@@ -260,10 +277,12 @@ viewArticle shared model article =
       ]
         |> Element.column
             [ class "container page" |> Element.htmlAttribute
+            , Element.width <| Element.fill
             ]
     ]
         |> Element.column
-            [ class "article-page" |> Element.htmlAttribute
+            [ Element.width <| Element.fill
+            , class "article-page" |> Element.htmlAttribute
             ]
 
 
@@ -271,10 +290,7 @@ viewArticleMeta : Shared.Model -> Model -> Article -> Html Msg
 viewArticleMeta shared model article =
     div [ class "article-meta" ] <|
         List.concat
-            [ [ a [ href ("/profile/" ++ article.author.username) ]
-                    [ img [ src article.author.image ] []
-                    ]
-              , div [ class "info" ]
+            [ [ div [ class "info" ]
                     [ a [ class "author", href ("/profile/" ++ article.author.username) ] [ text article.author.username ]
                     , span [ class "date" ] [ text (Utils.Time.formatDate article.createdAt) ]
                     ]
@@ -342,75 +358,88 @@ viewControls article user =
 
 viewCommentSection : Shared.Model -> Model -> Article -> Element Msg
 viewCommentSection shared model article =
-    List.concat
-        [ case shared.user of
-            Just user ->
-                [ viewCommentForm model user article
-                    |> Element.html
-                ]
+    [ case model.comments of
+        Api.Data.Success comments ->
+            List.map (viewComment shared.user article) comments
+                |> Element.column
+                    [ Element.fill
+                        |> Element.maximum Config.View.maxWidth
+                        |> Element.width
+                    ]
 
-            Nothing ->
-                []
-        , case model.comments of
-            Api.Data.Success comments ->
-                List.map (viewComment shared.user article) comments
+        _ ->
+            Element.none
+    , case shared.user of
+        Just user ->
+            viewCommentForm model user article
 
-            _ ->
-                []
-        ]
-        |> Element.row [ class "col-xs-12 col-md-8 offset-md-2" |> Element.htmlAttribute ]
-        |> Element.el [ class "row" |> Element.htmlAttribute ]
+        Nothing ->
+            Element.none
+    ]
+        |> Element.column [ Element.width Element.fill ]
 
 
-viewCommentForm : Model -> User -> Article -> Html Msg
+viewCommentForm : Model -> User -> Article -> Element Msg
 viewCommentForm model user article =
-    form [ class "card comment-form", Events.onSubmit (SubmittedCommentForm user article) ]
-        [ div [ class "card-block" ]
-            [ textarea
-                [ class "form-control"
-                , placeholder "Write a comment..."
-                , attribute "rows" "3"
-                , value model.commentText
-                , Events.onInput UpdatedCommentText
-                ]
-                []
-            ]
-        , div [ class "card-footer" ]
-            [ img [ class "comment-author-img", src user.image ] []
-            , button [ class "btn btn-sm btn-primary" ] [ text "Post Comment" ]
-            ]
-        ]
+    [ View.Input.multiLineInput
+        { onChange = UpdatedCommentText
+        , text = model.commentText
+        , label = "Write a comment..."
+        }
+    , Widget.textButton (Material.containedButton Color.palette)
+        { text = "Post Comment"
+        , onPress = Just <| SubmittedCommentForm user article
+        }
+        |> Element.el [ Element.alignRight, Element.width Element.fill ]
+    ]
+        |> Element.column
+            (Material.cardAttributes Color.palette
+                ++ [ Element.fill
+                        |> Element.maximum Config.View.maxWidth
+                        |> Element.width
+                   , Element.centerX
+                   ]
+            )
 
 
 viewComment : Maybe User -> Article -> Comment -> Element Msg
 viewComment currentUser article comment =
     let
+        viewCommentActions : Element Msg
         viewCommentActions =
-            Utils.Maybe.view currentUser <|
-                \user ->
+            case currentUser of
+                Just user ->
                     if user.username == comment.author.username then
-                        span
-                            [ class "mod-options"
-                            , Events.onClick (ClickedDeleteComment user article comment)
-                            ]
-                            [ i [ class "ion-trash-a" ] [] ]
+                        Widget.textButton (Material.textButton Color.palette)
+                            { text = "Delete"
+                            , onPress = Just <| ClickedDeleteComment user article comment
+                            }
 
                     else
-                        text ""
+                        Element.none
+
+                Nothing ->
+                    Element.none
     in
-    div [ class "card" ]
-        [ div [ class "card-block" ]
-            [ p [ class "card-text" ] [ text comment.body ] ]
-        , div [ class "card-footer" ]
-            [ a
-                [ class "comment-author"
-                , href ("/profile/" ++ comment.author.username)
-                ]
-                [ img [ class "comment-author-img", src comment.author.image ] []
-                , text comment.author.username
-                ]
-            , span [ class "date-posted" ] [ text (Utils.Time.formatDate comment.createdAt) ]
-            , viewCommentActions
-            ]
-        ]
-        |> Element.html
+    [ Element.text comment.body
+    , [ Widget.textButton (Material.textButton Color.palette)
+            { text = comment.author.username
+            , onPress =
+                Route.Profile__Username_ { username = comment.author.username }
+                    |> RequestedRouteChange
+                    |> Just
+            }
+      , span [ class "date-posted" ] [ text (Utils.Time.formatDate comment.createdAt) ]
+            |> Element.html
+      , viewCommentActions
+      ]
+        |> Element.row []
+    ]
+        |> Element.column
+            (Material.cardAttributes Color.palette
+                ++ [ Element.fill
+                        |> Element.maximum Config.View.maxWidth
+                        |> Element.width
+                   , Element.centerX
+                   ]
+            )
