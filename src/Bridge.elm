@@ -1,7 +1,7 @@
 module Bridge exposing (..)
 
-import Api.Article.Filters exposing (Filters)
-import Api.User exposing (User)
+import Data.Article.Filters exposing (Filters)
+import Data.User exposing (User)
 import Lamdera
 
 

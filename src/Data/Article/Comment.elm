@@ -1,4 +1,4 @@
-module Api.Article.Comment exposing (Comment)
+module Data.Article.Comment exposing (Comment)
 
 {-|
 
@@ -6,7 +6,7 @@ module Api.Article.Comment exposing (Comment)
 
 -}
 
-import Api.Profile exposing (Profile)
+import Data.Profile exposing (Profile)
 import Time
 
 

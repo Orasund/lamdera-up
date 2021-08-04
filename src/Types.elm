@@ -1,11 +1,12 @@
 module Types exposing (..)
 
-import Api.Article exposing (ArticleStore, Slug)
-import Api.Article.Comment exposing (Comment)
-import Api.User exposing (User, UserFull, UserId)
 import Bridge
 import Browser
 import Browser.Navigation exposing (Key)
+import Data.Article exposing (ArticleStore, Slug)
+import Data.Article.Comment exposing (Comment)
+import Data.Game exposing (Game)
+import Data.User exposing (User, UserFull, UserId)
 import Dict exposing (Dict)
 import Gen.Pages as Pages
 import Lamdera exposing (ClientId, SessionId)
@@ -27,6 +28,7 @@ type alias BackendModel =
     , users : Dict Int UserFull
     , articles : Dict Slug ArticleStore
     , comments : Dict Slug (Dict Int Comment)
+    , game : Game
     }
 
 
@@ -52,7 +54,7 @@ type BackendMsg
     | ArticleCreated Time.Posix (Maybe UserFull) ClientId { title : String, description : String, body : String, tags : List String }
     | ArticleCommentCreated Time.Posix (Maybe UserFull) ClientId Slug { body : String }
     | NoOpBackendMsg
-    | AddPoints Int
+    | WeekPassed
 
 
 type ToFrontend

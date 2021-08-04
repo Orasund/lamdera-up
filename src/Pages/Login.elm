@@ -1,8 +1,8 @@
 module Pages.Login exposing (Model, Msg(..), page)
 
-import Api.Data exposing (Data)
-import Api.User exposing (User)
 import Bridge exposing (..)
+import Data.Response exposing (Response)
+import Data.User exposing (User)
 import Effect exposing (Effect)
 import Gen.Route as Route exposing (Route)
 import Page
@@ -28,7 +28,7 @@ page shared req =
 
 
 type alias Model =
-    { user : Data User
+    { user : Response User
     , email : String
     , password : String
     }
@@ -39,10 +39,10 @@ init shared =
     ( Model
         (case shared.user of
             Just user ->
-                Api.Data.Success user
+                Data.Response.Success user
 
             Nothing ->
-                Api.Data.NotAsked
+                Data.Response.NotAsked
         )
         ""
         ""
@@ -57,7 +57,7 @@ init shared =
 type Msg
     = Updated Field String
     | AttemptedSignIn
-    | GotUser (Data User)
+    | GotUser (Response User)
     | RequestedRouteChange Route
 
 
@@ -91,7 +91,7 @@ update req msg model =
             )
 
         GotUser user ->
-            case Api.Data.toMaybe user of
+            case Data.Response.toMaybe user of
                 Just user_ ->
                     ( { model | user = user }
                     , Effect.batch

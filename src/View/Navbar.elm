@@ -1,7 +1,7 @@
 module View.Navbar exposing (view)
 
-import Api.User exposing (User)
 import Array
+import Data.User exposing (User)
 import Dict
 import Element exposing (Element)
 import Gen.Route as Route exposing (Route)

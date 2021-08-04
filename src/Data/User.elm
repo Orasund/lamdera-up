@@ -1,4 +1,4 @@
-module Api.User exposing (..)
+module Data.User exposing (..)
 
 {-|
 
@@ -6,8 +6,8 @@ module Api.User exposing (..)
 
 -}
 
-import Api.Article exposing (Slug)
-import Api.Profile exposing (Profile)
+import Data.Article exposing (Slug)
+import Data.Profile exposing (Profile)
 
 
 type alias User =
@@ -16,6 +16,7 @@ type alias User =
     , username : String
     , bio : Maybe String
     , points : Int
+    , tokens : Int
     }
 
 
@@ -28,6 +29,7 @@ type alias UserFull =
     , favorites : List Slug
     , following : List UserId
     , points : Int
+    , tokens : Int
     }
 
 
@@ -42,6 +44,7 @@ toUser u =
     , username = u.username
     , bio = u.bio
     , points = u.points
+    , tokens = u.tokens
     }
 
 

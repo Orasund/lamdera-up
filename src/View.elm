@@ -28,5 +28,7 @@ map fn view =
     }
 
 
-toBrowserDocument =
-    identity
+toBrowserDocument view =
+    { title = view.title
+    , body = view.body |> Element.layout [] |> List.singleton
+    }

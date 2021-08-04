@@ -1,11 +1,12 @@
 module Backend exposing (..)
 
-import Api.Article exposing (Article, ArticleStore, Slug)
-import Api.Article.Filters as Filters exposing (Filters(..))
-import Api.Data exposing (Data(..))
-import Api.Profile exposing (Profile)
-import Api.User exposing (Email, UserFull)
 import Bridge exposing (..)
+import Data.Article exposing (Article, ArticleStore, Slug)
+import Data.Article.Filters as Filters exposing (Filters(..))
+import Data.Game as Game
+import Data.Profile exposing (Profile)
+import Data.Response exposing (Response(..))
+import Data.User exposing (Email, UserFull)
 import Dict
 import Dict.Extra as Dict
 import Gen.Msg
@@ -44,6 +45,7 @@ init =
       , users = Dict.empty
       , articles = Dict.empty
       , comments = Dict.empty
+      , game = Game.init
       }
     , Cmd.none
     )
@@ -55,7 +57,7 @@ update msg model =
         CheckSession sid cid ->
             model
                 |> getSessionUser sid
-                |> Maybe.map (\user -> ( model, sendToFrontend cid (ActiveSession (Api.User.toUser user)) ))
+                |> Maybe.map (\user -> ( model, sendToFrontend cid (ActiveSession (Data.User.toUser user)) ))
                 |> Maybe.withDefault ( model, Cmd.none )
 
         RenewSession uid sid cid now ->
@@ -99,7 +101,7 @@ update msg model =
                             , createdAt = t
                             , updatedAt = t
                             , body = commentBody.body
-                            , author = Api.User.toProfile user
+                            , author = Data.User.toProfile user
                             }
 
                         newComments =
@@ -126,9 +128,11 @@ update msg model =
         NoOpBackendMsg ->
             ( model, Cmd.none )
 
-        AddPoints int ->
+        WeekPassed ->
             ( { model
-                | users = model.users |> Dict.map (\_ user -> { user | points = user.points + 1 })
+                | game =
+                    model.game
+                        |> Game.triggerEvent Game.WeekPassed
               }
             , Cmd.none
             )
@@ -201,7 +205,7 @@ updateFromFrontend sessionId clientId msg model =
                                     filtered |> Dict.map (\slug article -> loadArticleFromStore model userM article)
 
                                 grouped =
-                                    enriched |> Dict.values |> List.greedyGroupsOf Api.Article.itemsPerPage
+                                    enriched |> Dict.values |> List.greedyGroupsOf Data.Article.itemsPerPage
 
                                 articles =
                                     grouped |> List.getAt (page - 1) |> Maybe.withDefault []
@@ -241,7 +245,7 @@ updateFromFrontend sessionId clientId msg model =
                         |> Dict.get slug
                         |> Maybe.map Success
                         |> Maybe.withDefault (Failure [ "no article with slug: " ++ slug ])
-                        |> Api.Data.map (loadArticleFromStore model (model |> getSessionUser sessionId))
+                        |> Data.Response.map (loadArticleFromStore model (model |> getSessionUser sessionId))
             in
             ( { model | articles = articles }, send_ (PageMsg (Gen.Msg.Editor__ArticleSlug_ (Pages.Editor.ArticleSlug_.UpdatedArticle res))) )
 
@@ -374,7 +378,7 @@ updateFromFrontend sessionId clientId msg model =
                         |> Maybe.map
                             (\( k, u ) ->
                                 if u.password == params.password then
-                                    ( Success (Api.User.toUser u), renewSession u.id sessionId clientId )
+                                    ( Success (Data.User.toUser u), renewSession u.id sessionId clientId )
 
                                 else
                                     ( Failure [ "email or password is invalid" ], Cmd.none )
@@ -400,11 +404,12 @@ updateFromFrontend sessionId clientId msg model =
                                 , password = params.password
                                 , favorites = []
                                 , following = []
+                                , tokens = 0
                                 }
                         in
                         ( { model | users = model.users |> Dict.insert user_.id user_ }
                         , renewSession user_.id sessionId clientId
-                        , Success (Api.User.toUser user_)
+                        , Success (Data.User.toUser user_)
                         )
             in
             ( model_, Cmd.batch [ cmd, send_ (PageMsg (Gen.Msg.Register (Pages.Register.GotUser res))) ] )
@@ -429,7 +434,7 @@ updateFromFrontend sessionId clientId msg model =
                                             , bio = Just params.bio
                                         }
                                 in
-                                ( model |> updateUser user_, Success (Api.User.toUser user_) )
+                                ( model |> updateUser user_, Success (Data.User.toUser user_) )
 
                             else
                                 ( model, Failure [ "Old password is incorrect" ] )
@@ -454,7 +459,7 @@ renewSession email sid cid =
     Time.now |> Task.perform (RenewSession email sid cid)
 
 
-getListing : Model -> SessionId -> Filters -> Int -> Api.Article.Listing
+getListing : Model -> SessionId -> Filters -> Int -> Data.Article.Listing
 getListing model sessionId (Filters { tag, author, favorited }) page =
     let
         filtered =
@@ -467,7 +472,7 @@ getListing model sessionId (Filters { tag, author, favorited }) page =
             filtered |> Dict.map (\slug article -> loadArticleFromStore model (model |> getSessionUser sessionId) article)
 
         grouped =
-            enriched |> Dict.values |> List.greedyGroupsOf Api.Article.itemsPerPage
+            enriched |> Dict.values |> List.greedyGroupsOf Data.Article.itemsPerPage
 
         articles =
             grouped |> List.getAt (page - 1) |> Maybe.withDefault []
@@ -478,13 +483,13 @@ getListing model sessionId (Filters { tag, author, favorited }) page =
     }
 
 
-loadArticleBySlug : String -> SessionId -> Model -> Data Article
+loadArticleBySlug : String -> SessionId -> Model -> Response Article
 loadArticleBySlug slug sid model =
     model.articles
         |> Dict.get slug
         |> Maybe.map Success
         |> Maybe.withDefault (Failure [ "no article with slug: " ++ slug ])
-        |> Api.Data.map (loadArticleFromStore model (model |> getSessionUser sid))
+        |> Data.Response.map (loadArticleFromStore model (model |> getSessionUser sid))
 
 
 uniqueSlug : Model -> String -> Int -> String
@@ -503,13 +508,13 @@ uniqueSlug model title i =
         uniqueSlug model title (i + 1)
 
 
-favoriteArticle : SessionId -> Slug -> Model -> (Data Article -> Cmd msg) -> ( Model, Cmd msg )
+favoriteArticle : SessionId -> Slug -> Model -> (Response Article -> Cmd msg) -> ( Model, Cmd msg )
 favoriteArticle sessionId slug model toResponseCmd =
     let
         res =
             model
                 |> loadArticleBySlug slug sessionId
-                |> Api.Data.map (\a -> { a | favorited = True })
+                |> Data.Response.map (\a -> { a | favorited = True })
     in
     case model |> getSessionUser sessionId of
         Just user ->
@@ -525,13 +530,13 @@ favoriteArticle sessionId slug model toResponseCmd =
             ( model, toResponseCmd <| Failure [ "invalid session" ] )
 
 
-unfavoriteArticle : SessionId -> Slug -> Model -> (Data Article -> Cmd msg) -> ( Model, Cmd msg )
+unfavoriteArticle : SessionId -> Slug -> Model -> (Response Article -> Cmd msg) -> ( Model, Cmd msg )
 unfavoriteArticle sessionId slug model toResponseCmd =
     let
         res =
             model
                 |> loadArticleBySlug slug sessionId
-                |> Api.Data.map (\a -> { a | favorited = False })
+                |> Data.Response.map (\a -> { a | favorited = False })
     in
     case model |> getSessionUser sessionId of
         Just user ->
@@ -543,7 +548,7 @@ unfavoriteArticle sessionId slug model toResponseCmd =
             ( model, toResponseCmd <| Failure [ "invalid session" ] )
 
 
-followUser : SessionId -> Email -> Model -> (Data Profile -> Cmd msg) -> ( Model, Cmd msg )
+followUser : SessionId -> Email -> Model -> (Response Profile -> Cmd msg) -> ( Model, Cmd msg )
 followUser sessionId email model toResponseCmd =
     let
         res =
@@ -566,14 +571,14 @@ followUser sessionId email model toResponseCmd =
             ( model, toResponseCmd <| Failure [ "invalid session" ] )
 
 
-unfollowUser : SessionId -> Email -> Model -> (Data Profile -> Cmd msg) -> ( Model, Cmd msg )
+unfollowUser : SessionId -> Email -> Model -> (Response Profile -> Cmd msg) -> ( Model, Cmd msg )
 unfollowUser sessionId email model toResponseCmd =
     case model.users |> Dict.find (\k u -> u.email == email) of
         Just ( _, followed ) ->
             let
                 res =
                     followed
-                        |> Api.User.toProfile
+                        |> Data.User.toProfile
                         |> (\a -> Success { a | following = False })
             in
             case model |> getSessionUser sessionId of
@@ -595,11 +600,11 @@ updateUser user model =
 
 
 profileByUsername username model =
-    model.users |> Dict.find (\k u -> u.username == username) |> Maybe.map (Tuple.second >> Api.User.toProfile)
+    model.users |> Dict.find (\k u -> u.username == username) |> Maybe.map (Tuple.second >> Data.User.toProfile)
 
 
 profileByEmail email model =
-    model.users |> Dict.find (\k u -> u.email == email) |> Maybe.map (Tuple.second >> Api.User.toProfile)
+    model.users |> Dict.find (\k u -> u.email == email) |> Maybe.map (Tuple.second >> Data.User.toProfile)
 
 
 loadArticleFromStore : Model -> Maybe UserFull -> ArticleStore -> Article
@@ -611,7 +616,7 @@ loadArticleFromStore model userM store =
         author =
             model.users
                 |> Dict.get store.userId
-                |> Maybe.map Api.User.toProfile
+                |> Maybe.map Data.User.toProfile
                 |> Maybe.withDefault
                     { username = "error: unknown user"
                     , bio = Nothing
@@ -649,5 +654,5 @@ subscriptions m =
     in
     Sub.batch
         [ onConnect CheckSession
-        , Time.every (7 * day) (always <| AddPoints 1)
+        , Time.every (7 * day) (always <| WeekPassed)
         ]

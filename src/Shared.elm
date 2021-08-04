@@ -8,19 +8,15 @@ module Shared exposing
     , view
     )
 
-import Api.User exposing (User)
 import Bridge exposing (..)
-import Browser.Navigation as Navigation
-import Color
+import Data.User exposing (User)
 import Element exposing (Element)
-import Element.Background as Background
-import Gen.Route as Route exposing (Route)
+import Gen.Route exposing (Route)
 import Html exposing (..)
-import Html.Attributes exposing (class, href, rel)
+import Html.Attributes exposing (href, rel)
 import Request exposing (Request)
 import Utils.Route
 import View exposing (View)
-import View.Color as Color
 import View.Navbar
 
 
@@ -38,7 +34,7 @@ type alias Model =
 
 
 init : Request -> Flags -> ( Model, Cmd Msg )
-init _ json =
+init _ _ =
     ( Model Nothing
     , Cmd.none
     )

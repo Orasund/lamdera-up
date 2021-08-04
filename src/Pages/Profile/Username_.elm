@@ -1,12 +1,12 @@
 module Pages.Profile.Username_ exposing (Model, Msg(..), page)
 
-import Api.Article exposing (Article)
-import Api.Article.Filters as Filters
-import Api.Data exposing (Data)
-import Api.Profile exposing (Profile)
-import Api.User exposing (User)
 import Bridge exposing (..)
 import Config.View
+import Data.Article exposing (Article)
+import Data.Article.Filters as Filters
+import Data.Profile exposing (Profile)
+import Data.Response exposing (Response)
+import Data.User exposing (User)
 import Element exposing (Element)
 import Element.Border as Border
 import Gen.Params.Profile.Username_ exposing (Params)
@@ -40,8 +40,8 @@ page shared req =
 
 type alias Model =
     { username : String
-    , profile : Data Profile
-    , listing : Data Api.Article.Listing
+    , profile : Response Profile
+    , listing : Response Data.Article.Listing
     , selectedTab : Tab
     , page : Int
     }
@@ -55,8 +55,8 @@ type Tab
 init : Shared.Model -> Request.With Params -> ( Model, Cmd Msg )
 init shared { params } =
     ( { username = params.username
-      , profile = Api.Data.Loading
-      , listing = Api.Data.Loading
+      , profile = Data.Response.Loading
+      , listing = Data.Response.Loading
       , selectedTab = MyArticles
       , page = 1
       }
@@ -94,12 +94,12 @@ fetchArticlesFavoritedBy username page_ =
 
 
 type Msg
-    = GotProfile (Data Profile)
-    | GotArticles (Data Api.Article.Listing)
+    = GotProfile (Response Profile)
+    | GotArticles (Response Data.Article.Listing)
     | Clicked Tab
     | ClickedFavorite User Article
     | ClickedUnfavorite User Article
-    | UpdatedArticle (Data Article)
+    | UpdatedArticle (Response Article)
     | ClickedFollow User Profile
     | ClickedUnfollow User Profile
     | ClickedPage Int
@@ -137,7 +137,7 @@ update shared msg model =
         Clicked MyArticles ->
             ( { model
                 | selectedTab = MyArticles
-                , listing = Api.Data.Loading
+                , listing = Data.Response.Loading
                 , page = 1
               }
             , fetchArticlesBy model.username 1
@@ -146,7 +146,7 @@ update shared msg model =
         Clicked FavoritedArticles ->
             ( { model
                 | selectedTab = FavoritedArticles
-                , listing = Api.Data.Loading
+                , listing = Data.Response.Loading
                 , page = 1
               }
             , fetchArticlesFavoritedBy model.username 1
@@ -180,7 +180,7 @@ update shared msg model =
                             fetchArticlesFavoritedBy
             in
             ( { model
-                | listing = Api.Data.Loading
+                | listing = Data.Response.Loading
                 , page = page_
               }
             , fetch
@@ -188,10 +188,10 @@ update shared msg model =
                 page_
             )
 
-        UpdatedArticle (Api.Data.Success article) ->
+        UpdatedArticle (Data.Response.Success article) ->
             ( { model
                 | listing =
-                    Api.Data.map (Api.Article.updateArticle article)
+                    Data.Response.map (Data.Article.updateArticle article)
                         model.listing
               }
             , Cmd.none
@@ -215,10 +215,10 @@ view shared model =
     { title = "Profile"
     , body =
         case model.profile of
-            Api.Data.Success profile ->
+            Data.Response.Success profile ->
                 viewProfile shared profile model
 
-            Api.Data.Failure _ ->
+            Data.Response.Failure _ ->
                 View.NotFound.view
 
             _ ->

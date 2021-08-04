@@ -1,4 +1,4 @@
-module Api.Article exposing (..)
+module Data.Article exposing (..)
 
 {-|
 
@@ -6,7 +6,7 @@ module Api.Article exposing (..)
 
 -}
 
-import Api.Profile exposing (Profile)
+import Data.Profile exposing (Profile)
 import Time
 
 

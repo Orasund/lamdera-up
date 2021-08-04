@@ -1,9 +1,9 @@
 module Pages.Editor.ArticleSlug_ exposing (Model, Msg(..), page)
 
-import Api.Article exposing (Article)
-import Api.Data exposing (Data)
-import Api.User exposing (User)
 import Bridge exposing (..)
+import Data.Article exposing (Article)
+import Data.Response exposing (Response)
+import Data.User exposing (User)
 import Element
 import Gen.Params.Editor.ArticleSlug_ exposing (Params)
 import Gen.Route as Route
@@ -34,7 +34,7 @@ page shared req =
 type alias Model =
     { slug : String
     , form : Maybe Form
-    , article : Data Article
+    , article : Response Article
     }
 
 
@@ -42,7 +42,7 @@ init : Shared.Model -> Request.With Params -> ( Model, Cmd Msg )
 init shared { params } =
     ( { slug = params.articleSlug
       , form = Nothing
-      , article = Api.Data.Loading
+      , article = Data.Response.Loading
       }
     , ArticleGet_Editor__ArticleSlug_
         { slug = params.articleSlug
@@ -58,8 +58,8 @@ init shared { params } =
 type Msg
     = SubmittedForm User Form
     | Updated Field String
-    | UpdatedArticle (Data Article)
-    | LoadedInitialArticle (Data Article)
+    | UpdatedArticle (Response Article)
+    | LoadedInitialArticle (Response Article)
 
 
 update : Request.With Params -> Msg -> Model -> ( Model, Cmd Msg )
@@ -67,7 +67,7 @@ update req msg model =
     case msg of
         LoadedInitialArticle article ->
             case article of
-                Api.Data.Success a ->
+                Data.Response.Success a ->
                     ( { model
                         | form =
                             Just <|
@@ -113,7 +113,7 @@ update req msg model =
         UpdatedArticle article ->
             ( { model | article = article }
             , case article of
-                Api.Data.Success newArticle ->
+                Data.Response.Success newArticle ->
                     Utils.Route.navigate req.key
                         (Route.Article__Slug_ { slug = newArticle.slug })
 

@@ -1,12 +1,12 @@
 module Pages.Article.Slug_ exposing (Model, Msg(..), page)
 
-import Api.Article exposing (Article)
-import Api.Article.Comment exposing (Comment)
-import Api.Data exposing (Data)
-import Api.Profile exposing (Profile)
-import Api.User exposing (User)
 import Bridge exposing (..)
 import Config.View
+import Data.Article exposing (Article)
+import Data.Article.Comment exposing (Comment)
+import Data.Profile exposing (Profile)
+import Data.Response exposing (Response)
+import Data.User exposing (User)
 import Effect exposing (Effect)
 import Element exposing (Element)
 import Gen.Params.Article.Slug_ exposing (Params)
@@ -42,16 +42,16 @@ page shared req =
 
 
 type alias Model =
-    { article : Data Article
-    , comments : Data (List Comment)
+    { article : Response Article
+    , comments : Response (List Comment)
     , commentText : String
     }
 
 
 init : Shared.Model -> Request.With Params -> ( Model, Effect Msg )
 init shared { params } =
-    ( { article = Api.Data.Loading
-      , comments = Api.Data.Loading
+    ( { article = Data.Response.Loading
+      , comments = Data.Response.Loading
       , commentText = ""
       }
     , Cmd.batch
@@ -73,19 +73,19 @@ init shared { params } =
 
 
 type Msg
-    = GotArticle (Data Article)
+    = GotArticle (Response Article)
     | ClickedFavorite User Article
     | ClickedUnfavorite User Article
     | ClickedDeleteArticle User Article
-    | DeletedArticle (Data Article)
-    | GotAuthor (Data Profile)
+    | DeletedArticle (Response Article)
+    | GotAuthor (Response Profile)
     | ClickedFollow User Profile
     | ClickedUnfollow User Profile
-    | GotComments (Data (List Comment))
+    | GotComments (Response (List Comment))
     | ClickedDeleteComment User Article Comment
-    | DeletedComment (Data Int)
+    | DeletedComment (Response Int)
     | SubmittedCommentForm User Article
-    | CreatedComment (Data Comment)
+    | CreatedComment (Response Comment)
     | UpdatedCommentText String
     | RequestedRouteChange Route
 
@@ -136,13 +136,13 @@ update req msg model =
                 updateAuthor : Article -> Article
                 updateAuthor article =
                     case profile of
-                        Api.Data.Success author ->
+                        Data.Response.Success author ->
                             { article | author = author }
 
                         _ ->
                             article
             in
-            ( { model | article = Api.Data.map updateAuthor model.article }
+            ( { model | article = Data.Response.map updateAuthor model.article }
             , Effect.none
             )
 
@@ -190,8 +190,8 @@ update req msg model =
 
         CreatedComment comment ->
             ( case comment of
-                Api.Data.Success c ->
-                    { model | comments = Api.Data.map (\comments -> c :: comments) model.comments }
+                Data.Response.Success c ->
+                    { model | comments = Data.Response.map (\comments -> c :: comments) model.comments }
 
                 _ ->
                     model
@@ -212,9 +212,9 @@ update req msg model =
             let
                 removeComment : List Comment -> List Comment
                 removeComment =
-                    List.filter (\comment -> Api.Data.Success comment.id /= id)
+                    List.filter (\comment -> Data.Response.Success comment.id /= id)
             in
-            ( { model | comments = Api.Data.map removeComment model.comments }
+            ( { model | comments = Data.Response.map removeComment model.comments }
             , Effect.none
             )
 
@@ -234,7 +234,7 @@ subscriptions _ =
 view : Shared.Model -> Model -> View Msg
 view shared model =
     case model.article of
-        Api.Data.Success article ->
+        Data.Response.Success article ->
             { title = article.title
             , body = viewArticle shared model article
             }
@@ -359,7 +359,7 @@ viewControls article user =
 viewCommentSection : Shared.Model -> Model -> Article -> Element Msg
 viewCommentSection shared model article =
     [ case model.comments of
-        Api.Data.Success comments ->
+        Data.Response.Success comments ->
             List.map (viewComment shared.user article) comments
                 |> Element.column
                     [ Element.fill

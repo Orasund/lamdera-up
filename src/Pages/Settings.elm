@@ -1,16 +1,15 @@
 module Pages.Settings exposing (Model, Msg(..), page)
 
-import Api.Data exposing (Data)
-import Api.User exposing (User)
 import Bridge exposing (..)
 import Config.View
+import Data.Response exposing (Response)
+import Data.User exposing (User)
 import Effect exposing (Effect)
 import Element
 import Element.Border as Border
 import Element.Input as Input
 import Html exposing (..)
-import Html.Attributes exposing (attribute, class, placeholder, type_, value)
-import Html.Events as Events
+import Html.Attributes exposing (class, value)
 import Page
 import Request exposing (Request)
 import Shared
@@ -85,7 +84,7 @@ init shared =
 type Msg
     = Updated Field String
     | SubmittedForm User
-    | GotUser (Data User)
+    | GotUser (Response User)
 
 
 type Field
@@ -114,7 +113,7 @@ update msg model =
         Updated NewPassword value ->
             ( { model | newPassword = Just value }, Effect.none )
 
-        SubmittedForm user ->
+        SubmittedForm _ ->
             ( { model | message = Nothing, errors = [] }
             , (Effect.fromCmd << sendToBackend) <|
                 UserUpdate_Settings
@@ -128,12 +127,12 @@ update msg model =
                     }
             )
 
-        GotUser (Api.Data.Success user) ->
+        GotUser (Data.Response.Success user) ->
             ( { model | message = Just "User updated!" }
             , Effect.fromShared (Shared.SignedInUser user)
             )
 
-        GotUser (Api.Data.Failure reasons) ->
+        GotUser (Data.Response.Failure reasons) ->
             ( { model | errors = reasons }
             , Effect.none
             )

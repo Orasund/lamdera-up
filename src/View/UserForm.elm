@@ -1,21 +1,17 @@
 module View.UserForm exposing (Field, view)
 
-import Api.Data exposing (Data)
-import Api.User exposing (User)
 import Color
 import Config.View
+import Data.Response exposing (Response)
+import Data.User exposing (User)
 import Element exposing (Element)
-import Element.Background as Background
 import Element.Border as Border
 import Element.Input as Input
-import Gen.Route as Route exposing (Route)
+import Gen.Route exposing (Route)
 import Html exposing (..)
-import Html.Attributes exposing (class, href, placeholder, type_, value)
-import Html.Events as Events
 import View.Color as Color
 import View.ErrorList
 import Widget
-import Widget.Customize as Customize
 import Widget.Material as Material
 import Widget.Material.Typography as Typography
 
@@ -29,7 +25,7 @@ type alias Field msg =
 
 
 view :
-    { user : Data User
+    { user : Response User
     , label : String
     , onFormSubmit : msg
     , alternateLink : { label : String, route : Route }
@@ -57,7 +53,7 @@ view options =
             [ Element.spacing 16
             ]
     , case options.user of
-        Api.Data.Failure reasons ->
+        Data.Response.Failure reasons ->
             View.ErrorList.view reasons |> Element.html
 
         _ ->

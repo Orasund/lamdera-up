@@ -1,14 +1,14 @@
-module Api.Data exposing (Data(..), map, toMaybe)
+module Data.Response exposing (Response(..), map, toMaybe)
 
 
-type Data value
+type Response value
     = NotAsked
     | Loading
     | Failure (List String)
     | Success value
 
 
-map : (a -> b) -> Data a -> Data b
+map : (a -> b) -> Response a -> Response b
 map fn data =
     case data of
         NotAsked ->
@@ -24,7 +24,7 @@ map fn data =
             Success (fn value)
 
 
-toMaybe : Data value -> Maybe value
+toMaybe : Response value -> Maybe value
 toMaybe data =
     case data of
         Success value ->

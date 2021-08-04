@@ -1,4 +1,4 @@
-module Api.Profile exposing (Profile)
+module Data.Profile exposing (Profile)
 
 {-|
 

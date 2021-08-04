@@ -1,10 +1,10 @@
 module Pages.Home_ exposing (Model, Msg(..), page)
 
-import Api.Article exposing (Article)
-import Api.Article.Filters as Filters
-import Api.Data exposing (Data)
-import Api.User exposing (User)
 import Bridge exposing (..)
+import Data.Article exposing (Article)
+import Data.Article.Filters as Filters
+import Data.Response exposing (Response)
+import Data.User exposing (User)
 import Element
 import Html exposing (..)
 import Html.Attributes exposing (class, classList)
@@ -32,9 +32,9 @@ page shared _ =
 
 
 type alias Model =
-    { listing : Data Api.Article.Listing
+    { listing : Response Data.Article.Listing
     , page : Int
-    , tags : Data (List Tag)
+    , tags : Response (List Tag)
     , activeTab : Tab
     }
 
@@ -56,9 +56,9 @@ init shared =
 
         model : Model
         model =
-            { listing = Api.Data.Loading
+            { listing = Data.Response.Loading
             , page = 1
-            , tags = Api.Data.Loading
+            , tags = Data.Response.Loading
             , activeTab = activeTab
             }
     in
@@ -106,13 +106,13 @@ fetchArticlesForTab shared model =
 
 
 type Msg
-    = GotArticles (Data Api.Article.Listing)
-    | GotTags (Data (List Tag))
+    = GotArticles (Response Data.Article.Listing)
+    | GotTags (Response (List Tag))
     | SelectedTab Tab
     | ClickedFavorite User Article
     | ClickedUnfavorite User Article
     | ClickedPage Int
-    | UpdatedArticle (Data Article)
+    | UpdatedArticle (Response Article)
 
 
 type alias Tag =
@@ -138,7 +138,7 @@ update shared msg model =
                 newModel =
                     { model
                         | activeTab = tab
-                        , listing = Api.Data.Loading
+                        , listing = Data.Response.Loading
                         , page = 1
                     }
             in
@@ -167,7 +167,7 @@ update shared msg model =
                 newModel : Model
                 newModel =
                     { model
-                        | listing = Api.Data.Loading
+                        | listing = Data.Response.Loading
                         , page = page_
                     }
             in
@@ -175,10 +175,10 @@ update shared msg model =
             , fetchArticlesForTab shared newModel
             )
 
-        UpdatedArticle (Api.Data.Success article) ->
+        UpdatedArticle (Data.Response.Success article) ->
             ( { model
                 | listing =
-                    Api.Data.map (Api.Article.updateArticle article)
+                    Data.Response.map (Data.Article.updateArticle article)
                         model.listing
               }
             , Cmd.none
@@ -272,10 +272,10 @@ viewTabs shared model =
         ]
 
 
-viewTags : Data (List Tag) -> Html Msg
-viewTags data =
-    case data of
-        Api.Data.Success tags ->
+viewTags : Response (List Tag) -> Html Msg
+viewTags response =
+    case response of
+        Data.Response.Success tags ->
             div [ class "sidebar" ]
                 [ p [] [ text "Popular Tags" ]
                 , div [ class "tag-list" ] <|

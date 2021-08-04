@@ -5,9 +5,9 @@ module View.Editor exposing
     , view
     )
 
-import Api.Article exposing (Article)
-import Api.Data exposing (Data)
 import Config.View
+import Data.Article exposing (Article)
+import Data.Response exposing (Response)
 import Element exposing (Element)
 import Element.Border as Border
 import Element.Input as Input
@@ -64,7 +64,7 @@ view :
         }
     , buttonLabel : String
     , onUpdate : Field -> String -> msg
-    , article : Data Article
+    , article : Response Article
     }
     -> Element msg
 view options =
@@ -100,7 +100,7 @@ view options =
         }
         |> Element.el [ Element.alignRight ]
     , case options.article of
-        Api.Data.Failure reasons ->
+        Data.Response.Failure reasons ->
             ul [ class "error-messages" ]
                 (List.map (\message -> li [] [ text message ]) reasons)
                 |> Element.html

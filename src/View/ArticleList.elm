@@ -1,8 +1,8 @@
 module View.ArticleList exposing (view)
 
-import Api.Article exposing (Article)
-import Api.Data exposing (Data)
-import Api.User exposing (User)
+import Data.Article exposing (Article)
+import Data.Response exposing (Response)
+import Data.User exposing (User)
 import Html exposing (..)
 import Html.Attributes exposing (alt, class, classList, href, src)
 import Html.Events as Events
@@ -13,7 +13,7 @@ import View.IconButton as IconButton
 
 view :
     { user : Maybe User
-    , articleListing : Data Api.Article.Listing
+    , articleListing : Response Data.Article.Listing
     , onFavorite : User -> Article -> msg
     , onUnfavorite : User -> Article -> msg
     , onPageClick : Int -> msg
@@ -21,10 +21,10 @@ view :
     -> List (Html msg)
 view options =
     case options.articleListing of
-        Api.Data.Loading ->
+        Data.Response.Loading ->
             [ div [ class "article-preview" ] [ text "Loading..." ] ]
 
-        Api.Data.Success listing ->
+        Data.Response.Success listing ->
             let
                 viewPage : Int -> Html msg
                 viewPage page =

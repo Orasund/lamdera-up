@@ -1,9 +1,9 @@
 module Pages.Editor exposing (Model, Msg(..), page)
 
-import Api.Article exposing (Article)
-import Api.Data exposing (Data)
-import Api.User exposing (User)
 import Bridge exposing (..)
+import Data.Article exposing (Article)
+import Data.Response exposing (Response)
+import Data.User exposing (User)
 import Gen.Route as Route
 import Page
 import Request exposing (Request)
@@ -30,7 +30,7 @@ page shared req =
 
 type alias Model =
     { form : Form
-    , article : Data Article
+    , article : Response Article
     }
 
 
@@ -42,7 +42,7 @@ init shared =
             , body = ""
             , tags = ""
             }
-      , article = Api.Data.NotAsked
+      , article = Data.Response.NotAsked
       }
     , Cmd.none
     )
@@ -55,7 +55,7 @@ init shared =
 type Msg
     = SubmittedForm User
     | Updated Field String
-    | GotArticle (Data Article)
+    | GotArticle (Response Article)
 
 
 update : Request -> Msg -> Model -> ( Model, Cmd Msg )
@@ -91,7 +91,7 @@ update req msg model =
         GotArticle article ->
             ( { model | article = article }
             , case article of
-                Api.Data.Success newArticle ->
+                Data.Response.Success newArticle ->
                     Utils.Route.navigate req.key
                         (Route.Article__Slug_ { slug = newArticle.slug })
 
