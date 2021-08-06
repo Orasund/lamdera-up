@@ -6,7 +6,7 @@ module View.Editor exposing
     )
 
 import Config.View
-import Data.Article exposing (Article)
+import Data.Discussion exposing (Discussion)
 import Data.Response exposing (Response)
 import Element exposing (Element)
 import Element.Border as Border
@@ -64,25 +64,25 @@ view :
         }
     , buttonLabel : String
     , onUpdate : Field -> String -> msg
-    , article : Response Article
+    , discussion : Response Discussion
     }
     -> Element msg
 view options =
     [ Element.text options.title |> Element.el Typography.h2
     , [ View.Input.textInput
             { text = options.form.title
-            , label = "Article Title"
+            , label = "Discussion Title"
             , onChange = options.onUpdate Title
             }
       , View.Input.textInput
             { text = options.form.description
-            , label = "What's this article about?"
+            , label = "What's this discussion about?"
             , onChange = options.onUpdate Description
             }
       , View.Input.multiLineInput
             { onChange = options.onUpdate Body
             , text = options.form.body
-            , label = "Write your article (in markdown)"
+            , label = "Write your discussion (in markdown)"
             }
       , View.Input.textInput
             { text = options.form.tags
@@ -99,7 +99,7 @@ view options =
         , onPress = Just options.onFormSubmit
         }
         |> Element.el [ Element.alignRight ]
-    , case options.article of
+    , case options.discussion of
         Data.Response.Failure reasons ->
             ul [ class "error-messages" ]
                 (List.map (\message -> li [] [ text message ]) reasons)

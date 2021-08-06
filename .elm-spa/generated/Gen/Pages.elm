@@ -3,28 +3,28 @@ module Gen.Pages exposing (Model, Msg, init, subscriptions, update, view)
 import Browser.Navigation exposing (Key)
 import Effect exposing (Effect)
 import ElmSpa.Page
+import Gen.Model as Model
+import Gen.Msg as Msg
+import Gen.Params.Discussion.Slug_
 import Gen.Params.Editor
+import Gen.Params.Editor.DiscussionSlug_
 import Gen.Params.Home_
 import Gen.Params.Login
 import Gen.Params.NotFound
+import Gen.Params.Profile.Id_
 import Gen.Params.Register
 import Gen.Params.Settings
-import Gen.Params.Article.Slug_
-import Gen.Params.Editor.ArticleSlug_
-import Gen.Params.Profile.Id_
-import Gen.Model as Model
-import Gen.Msg as Msg
 import Gen.Route as Route exposing (Route)
 import Page exposing (Page)
+import Pages.Discussion.Slug_
 import Pages.Editor
+import Pages.Editor.DiscussionSlug_
 import Pages.Home_
 import Pages.Login
 import Pages.NotFound
+import Pages.Profile.Id_
 import Pages.Register
 import Pages.Settings
-import Pages.Article.Slug_
-import Pages.Editor.ArticleSlug_
-import Pages.Profile.Id_
 import Request exposing (Request)
 import Shared
 import Task
@@ -45,28 +45,28 @@ init route =
     case route of
         Route.Editor ->
             pages.editor.init ()
-    
+
         Route.Home_ ->
             pages.home_.init ()
-    
+
         Route.Login ->
             pages.login.init ()
-    
+
         Route.NotFound ->
             pages.notFound.init ()
-    
+
         Route.Register ->
             pages.register.init ()
-    
+
         Route.Settings ->
             pages.settings.init ()
-    
-        Route.Article__Slug_ params ->
-            pages.article__slug_.init params
-    
-        Route.Editor__ArticleSlug_ params ->
-            pages.editor__articleSlug_.init params
-    
+
+        Route.Discussion__Slug_ params ->
+            pages.discussion__slug_.init params
+
+        Route.Editor__DiscussionSlug_ params ->
+            pages.editor__discussionSlug_.init params
+
         Route.Profile__Id_ params ->
             pages.profile__id_.init params
 
@@ -76,25 +76,25 @@ update msg_ model_ =
     case ( msg_, model_ ) of
         ( Msg.Editor msg, Model.Editor params model ) ->
             pages.editor.update params msg model
-    
+
         ( Msg.Home_ msg, Model.Home_ params model ) ->
             pages.home_.update params msg model
-    
+
         ( Msg.Login msg, Model.Login params model ) ->
             pages.login.update params msg model
-    
+
         ( Msg.Register msg, Model.Register params model ) ->
             pages.register.update params msg model
-    
+
         ( Msg.Settings msg, Model.Settings params model ) ->
             pages.settings.update params msg model
-    
-        ( Msg.Article__Slug_ msg, Model.Article__Slug_ params model ) ->
-            pages.article__slug_.update params msg model
-    
-        ( Msg.Editor__ArticleSlug_ msg, Model.Editor__ArticleSlug_ params model ) ->
-            pages.editor__articleSlug_.update params msg model
-    
+
+        ( Msg.Discussion__Slug_ msg, Model.Discussion__Slug_ params model ) ->
+            pages.discussion__slug_.update params msg model
+
+        ( Msg.Editor__DiscussionSlug_ msg, Model.Editor__DiscussionSlug_ params model ) ->
+            pages.editor__discussionSlug_.update params msg model
+
         ( Msg.Profile__Id_ msg, Model.Profile__Id_ params model ) ->
             pages.profile__id_.update params msg model
 
@@ -107,31 +107,31 @@ view model_ =
     case model_ of
         Model.Redirecting_ ->
             \_ _ _ -> View.none
-    
+
         Model.Editor params model ->
             pages.editor.view params model
-    
+
         Model.Home_ params model ->
             pages.home_.view params model
-    
+
         Model.Login params model ->
             pages.login.view params model
-    
+
         Model.NotFound params ->
             pages.notFound.view params ()
-    
+
         Model.Register params model ->
             pages.register.view params model
-    
+
         Model.Settings params model ->
             pages.settings.view params model
-    
-        Model.Article__Slug_ params model ->
-            pages.article__slug_.view params model
-    
-        Model.Editor__ArticleSlug_ params model ->
-            pages.editor__articleSlug_.view params model
-    
+
+        Model.Discussion__Slug_ params model ->
+            pages.discussion__slug_.view params model
+
+        Model.Editor__DiscussionSlug_ params model ->
+            pages.editor__discussionSlug_.view params model
+
         Model.Profile__Id_ params model ->
             pages.profile__id_.view params model
 
@@ -141,31 +141,31 @@ subscriptions model_ =
     case model_ of
         Model.Redirecting_ ->
             \_ _ _ -> Sub.none
-    
+
         Model.Editor params model ->
             pages.editor.subscriptions params model
-    
+
         Model.Home_ params model ->
             pages.home_.subscriptions params model
-    
+
         Model.Login params model ->
             pages.login.subscriptions params model
-    
+
         Model.NotFound params ->
             pages.notFound.subscriptions params ()
-    
+
         Model.Register params model ->
             pages.register.subscriptions params model
-    
+
         Model.Settings params model ->
             pages.settings.subscriptions params model
-    
-        Model.Article__Slug_ params model ->
-            pages.article__slug_.subscriptions params model
-    
-        Model.Editor__ArticleSlug_ params model ->
-            pages.editor__articleSlug_.subscriptions params model
-    
+
+        Model.Discussion__Slug_ params model ->
+            pages.discussion__slug_.subscriptions params model
+
+        Model.Editor__DiscussionSlug_ params model ->
+            pages.editor__discussionSlug_.subscriptions params model
+
         Model.Profile__Id_ params model ->
             pages.profile__id_.subscriptions params model
 
@@ -181,8 +181,8 @@ pages :
     , notFound : Static Gen.Params.NotFound.Params
     , register : Bundle Gen.Params.Register.Params Pages.Register.Model Pages.Register.Msg
     , settings : Bundle Gen.Params.Settings.Params Pages.Settings.Model Pages.Settings.Msg
-    , article__slug_ : Bundle Gen.Params.Article.Slug_.Params Pages.Article.Slug_.Model Pages.Article.Slug_.Msg
-    , editor__articleSlug_ : Bundle Gen.Params.Editor.ArticleSlug_.Params Pages.Editor.ArticleSlug_.Model Pages.Editor.ArticleSlug_.Msg
+    , discussion__slug_ : Bundle Gen.Params.Discussion.Slug_.Params Pages.Discussion.Slug_.Model Pages.Discussion.Slug_.Msg
+    , editor__discussionSlug_ : Bundle Gen.Params.Editor.DiscussionSlug_.Params Pages.Editor.DiscussionSlug_.Model Pages.Editor.DiscussionSlug_.Msg
     , profile__id_ : Bundle Gen.Params.Profile.Id_.Params Pages.Profile.Id_.Model Pages.Profile.Id_.Msg
     }
 pages =
@@ -192,8 +192,8 @@ pages =
     , notFound = static Pages.NotFound.view Model.NotFound
     , register = bundle Pages.Register.page Model.Register Msg.Register
     , settings = bundle Pages.Settings.page Model.Settings Msg.Settings
-    , article__slug_ = bundle Pages.Article.Slug_.page Model.Article__Slug_ Msg.Article__Slug_
-    , editor__articleSlug_ = bundle Pages.Editor.ArticleSlug_.page Model.Editor__ArticleSlug_ Msg.Editor__ArticleSlug_
+    , discussion__slug_ = bundle Pages.Discussion.Slug_.page Model.Discussion__Slug_ Msg.Discussion__Slug_
+    , editor__discussionSlug_ = bundle Pages.Editor.DiscussionSlug_.page Model.Editor__DiscussionSlug_ Msg.Editor__DiscussionSlug_
     , profile__id_ = bundle Pages.Profile.Id_.page Model.Profile__Id_ Msg.Profile__Id_
     }
 
@@ -230,4 +230,3 @@ static view_ toModel =
     , view = \_ _ _ _ _ -> View.map never view_
     , subscriptions = \_ _ _ _ _ -> Sub.none
     }
-    

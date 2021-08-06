@@ -4,15 +4,15 @@ module Gen.Route exposing
     , toHref
     )
 
+import Gen.Params.Discussion.Slug_
 import Gen.Params.Editor
+import Gen.Params.Editor.DiscussionSlug_
 import Gen.Params.Home_
 import Gen.Params.Login
 import Gen.Params.NotFound
+import Gen.Params.Profile.Id_
 import Gen.Params.Register
 import Gen.Params.Settings
-import Gen.Params.Article.Slug_
-import Gen.Params.Editor.ArticleSlug_
-import Gen.Params.Profile.Id_
 import Url exposing (Url)
 import Url.Parser as Parser exposing ((</>), Parser)
 
@@ -24,8 +24,8 @@ type Route
     | NotFound
     | Register
     | Settings
-    | Article__Slug_ { slug : String }
-    | Editor__ArticleSlug_ { articleSlug : String }
+    | Discussion__Slug_ { slug : String }
+    | Editor__DiscussionSlug_ { discussionSlug : String }
     | Profile__Id_ { id : String }
 
 
@@ -42,9 +42,9 @@ routes =
     , Parser.map NotFound Gen.Params.NotFound.parser
     , Parser.map Register Gen.Params.Register.parser
     , Parser.map Settings Gen.Params.Settings.parser
-    , Parser.map Editor__ArticleSlug_ Gen.Params.Editor.ArticleSlug_.parser
+    , Parser.map Editor__DiscussionSlug_ Gen.Params.Editor.DiscussionSlug_.parser
     , Parser.map Profile__Id_ Gen.Params.Profile.Id_.parser
-    , Parser.map Article__Slug_ Gen.Params.Article.Slug_.parser
+    , Parser.map Discussion__Slug_ Gen.Params.Discussion.Slug_.parser
     ]
 
 
@@ -58,28 +58,27 @@ toHref route =
     case route of
         Editor ->
             joinAsHref [ "editor" ]
-    
+
         Home_ ->
             joinAsHref []
-    
+
         Login ->
             joinAsHref [ "login" ]
-    
+
         NotFound ->
             joinAsHref [ "not-found" ]
-    
+
         Register ->
             joinAsHref [ "register" ]
-    
+
         Settings ->
             joinAsHref [ "settings" ]
-    
-        Article__Slug_ params ->
-            joinAsHref [ "article", params.slug ]
-    
-        Editor__ArticleSlug_ params ->
-            joinAsHref [ "editor", params.articleSlug ]
-    
+
+        Discussion__Slug_ params ->
+            joinAsHref [ "discussion", params.slug ]
+
+        Editor__DiscussionSlug_ params ->
+            joinAsHref [ "editor", params.discussionSlug ]
+
         Profile__Id_ params ->
             joinAsHref [ "profile", params.id ]
-

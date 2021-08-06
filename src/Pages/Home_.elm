@@ -1,11 +1,14 @@
 module Pages.Home_ exposing (Model, Msg(..), page)
 
 import Bridge exposing (..)
-import Data.Article exposing (Article)
-import Data.Article.Filters as Filters
+import Config.View
+import Data.Discussion exposing (Discussion)
+import Data.Discussion.Filters as Filters
 import Data.Response exposing (Response)
 import Data.User exposing (User)
-import Element
+import Effect exposing (Effect)
+import Element exposing (Element)
+import Gen.Route as Route exposing (Route)
 import Html exposing (..)
 import Html.Attributes exposing (class, classList)
 import Html.Events as Events
@@ -14,12 +17,15 @@ import Request exposing (Request)
 import Shared
 import Utils.Maybe
 import View exposing (View)
-import View.ArticleList
+import View.Color as Color
+import View.DiscussionList
+import Widget
+import Widget.Material as Material
 
 
 page : Shared.Model -> Request -> Page.With Model Msg
 page shared _ =
-    Page.element
+    Page.advanced
         { init = init shared
         , update = update shared
         , subscriptions = subscriptions
@@ -32,7 +38,7 @@ page shared _ =
 
 
 type alias Model =
-    { listing : Response Data.Article.Listing
+    { listing : Response Data.Discussion.Listing
     , page : Int
     , tags : Response (List Tag)
     , activeTab : Tab
@@ -45,14 +51,12 @@ type Tab
     | TagFilter Tag
 
 
-init : Shared.Model -> ( Model, Cmd Msg )
+init : Shared.Model -> ( Model, Effect Msg )
 init shared =
     let
         activeTab : Tab
         activeTab =
-            shared.user
-                |> Maybe.map FeedFor
-                |> Maybe.withDefault Global
+            Global
 
         model : Model
         model =
@@ -64,13 +68,14 @@ init shared =
     in
     ( model
     , Cmd.batch
-        [ fetchArticlesForTab shared model
+        [ fetchDiscussionsForTab shared model
         , GetTags_Home_ |> sendToBackend
         ]
+        |> Effect.fromCmd
     )
 
 
-fetchArticlesForTab :
+fetchDiscussionsForTab :
     Shared.Model
     ->
         { model
@@ -78,23 +83,23 @@ fetchArticlesForTab :
             , activeTab : Tab
         }
     -> Cmd Msg
-fetchArticlesForTab shared model =
+fetchDiscussionsForTab shared model =
     case model.activeTab of
         Global ->
-            ArticleList_Home_
+            DiscussionList_Home_
                 { filters = Filters.create
                 , page = model.page
                 }
                 |> sendToBackend
 
         FeedFor user ->
-            ArticleFeed_Home_
+            DiscussionFeed_Home_
                 { page = model.page
                 }
                 |> sendToBackend
 
         TagFilter tag ->
-            ArticleList_Home_
+            DiscussionList_Home_
                 { filters = Filters.create |> Filters.withTag tag
                 , page = model.page
                 }
@@ -106,30 +111,31 @@ fetchArticlesForTab shared model =
 
 
 type Msg
-    = GotArticles (Response Data.Article.Listing)
+    = GotDiscussions (Response Data.Discussion.Listing)
     | GotTags (Response (List Tag))
     | SelectedTab Tab
-    | ClickedFavorite User Article
-    | ClickedUnfavorite User Article
+    | ClickedFavorite User Discussion
+    | ClickedUnfavorite User Discussion
     | ClickedPage Int
-    | UpdatedArticle (Response Article)
+    | UpdatedDiscussion (Response Discussion)
+    | RequestedRouteChange Route
 
 
 type alias Tag =
     String
 
 
-update : Shared.Model -> Msg -> Model -> ( Model, Cmd Msg )
+update : Shared.Model -> Msg -> Model -> ( Model, Effect Msg )
 update shared msg model =
     case msg of
-        GotArticles listing ->
+        GotDiscussions listing ->
             ( { model | listing = listing }
-            , Cmd.none
+            , Effect.none
             )
 
         GotTags tags ->
             ( { model | tags = tags }
-            , Cmd.none
+            , Effect.none
             )
 
         SelectedTab tab ->
@@ -143,23 +149,25 @@ update shared msg model =
                     }
             in
             ( newModel
-            , fetchArticlesForTab shared newModel
+            , fetchDiscussionsForTab shared newModel |> Effect.fromCmd
             )
 
-        ClickedFavorite user article ->
+        ClickedFavorite user discussion ->
             ( model
-            , ArticleFavorite_Home_
-                { slug = article.slug
+            , DiscussionFavorite_Home_
+                { slug = discussion.slug
                 }
                 |> sendToBackend
+                |> Effect.fromCmd
             )
 
-        ClickedUnfavorite user article ->
+        ClickedUnfavorite user discussion ->
             ( model
-            , ArticleUnfavorite_Home_
-                { slug = article.slug
+            , DiscussionUnfavorite_Home_
+                { slug = discussion.slug
                 }
                 |> sendToBackend
+                |> Effect.fromCmd
             )
 
         ClickedPage page_ ->
@@ -172,20 +180,24 @@ update shared msg model =
                     }
             in
             ( newModel
-            , fetchArticlesForTab shared newModel
+            , fetchDiscussionsForTab shared newModel
+                |> Effect.fromCmd
             )
 
-        UpdatedArticle (Data.Response.Success article) ->
+        UpdatedDiscussion (Data.Response.Success discussion) ->
             ( { model
                 | listing =
-                    Data.Response.map (Data.Article.updateArticle article)
+                    Data.Response.map (Data.Discussion.updateDiscussion discussion)
                         model.listing
               }
-            , Cmd.none
+            , Effect.none
             )
 
-        UpdatedArticle _ ->
-            ( model, Cmd.none )
+        UpdatedDiscussion _ ->
+            ( model, Effect.none )
+
+        RequestedRouteChange route ->
+            ( model, Shared.RequestedRouteChange route |> Effect.fromShared )
 
 
 subscriptions : Model -> Sub Msg
@@ -201,32 +213,27 @@ view : Shared.Model -> Model -> View Msg
 view shared model =
     { title = ""
     , body =
-        [ div [ class "container" ]
-            [ h1 [ class "logo-font" ] [ text "conduit" ]
-            , p [] [ text "A place to share your knowledge." ]
-            ]
-            |> Element.html
-            |> Element.el
-                [ Element.htmlAttribute <| class "banner"
-                , Element.width <| Element.fill
-                ]
-        , div [ class "row" ]
-            [ div [ class "col-md-9" ] <|
-                (viewTabs shared model
-                    :: View.ArticleList.view
+        [ [ (Widget.textButton (Material.textButton Color.palette)
+                { text = "Start Discussion"
+                , onPress = Route.Editor |> RequestedRouteChange |> Just
+                }
+                :: (View.DiscussionList.view
                         { user = shared.user
-                        , articleListing = model.listing
+                        , discussionListing = model.listing
                         , onFavorite = ClickedFavorite
                         , onUnfavorite = ClickedUnfavorite
                         , onPageClick = ClickedPage
                         }
-                )
-            , div [ class "col-md-3" ] [ viewTags model.tags ]
-            ]
-            |> Element.html
-            |> Element.el
+                        |> List.map Element.html
+                   )
+            )
+                |> Element.row []
+          , viewTags model.tags
+          ]
+            |> Element.row
                 [ Element.htmlAttribute <| class "container page"
                 , Element.width <| Element.fill
+                , Element.spaceEvenly
                 ]
         ]
             |> Element.column
@@ -272,7 +279,7 @@ viewTabs shared model =
         ]
 
 
-viewTags : Response (List Tag) -> Html Msg
+viewTags : Response (List Tag) -> Element Msg
 viewTags response =
     case response of
         Data.Response.Success tags ->
@@ -289,6 +296,7 @@ viewTags response =
                         )
                         tags
                 ]
+                |> Element.html
 
         _ ->
-            text ""
+            Element.text ""

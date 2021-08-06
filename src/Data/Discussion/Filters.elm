@@ -1,4 +1,4 @@
-module Data.Article.Filters exposing (..)
+module Data.Discussion.Filters exposing (..)
 
 import Dict
 import Dict.Extra as Dict
@@ -43,38 +43,38 @@ favoritedBy user_id (Filters filters) =
     Filters { filters | favorited = Just user_id }
 
 
-byTag mTag articles =
+byTag mTag discussions =
     case mTag of
         Just tag ->
-            articles |> Dict.filter (\_ a -> a.tags |> List.member tag)
+            discussions |> Dict.filter (\_ a -> a.tags |> List.member tag)
 
         Nothing ->
-            articles
+            discussions
 
 
-byAuthor mAuthor users articles =
+byAuthor mAuthor users discussions =
     case mAuthor of
         Just id ->
             case users |> Dict.find (\_ u -> u.id == id) |> Maybe.map Tuple.second of
                 Just user ->
-                    articles |> Dict.filter (\_ a -> a.userId == user.id)
+                    discussions |> Dict.filter (\_ a -> a.userId == user.id)
 
                 Nothing ->
-                    articles
+                    discussions
 
         Nothing ->
-            articles
+            discussions
 
 
-byFavorite mId users articles =
+byFavorite mId users discussions =
     case mId of
         Just id ->
             case users |> Dict.find (\_ u -> u.id == id) |> Maybe.map Tuple.second of
                 Just user ->
-                    articles |> Dict.filter (\slug _ -> List.member slug user.favorites)
+                    discussions |> Dict.filter (\slug _ -> List.member slug user.favorites)
 
                 Nothing ->
-                    articles
+                    discussions
 
         Nothing ->
-            articles
+            discussions

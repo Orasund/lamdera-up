@@ -3,8 +3,8 @@ module Types exposing (..)
 import Bridge
 import Browser
 import Browser.Navigation exposing (Key)
-import Data.Article exposing (ArticleStore, Slug)
-import Data.Article.Comment exposing (Comment)
+import Data.Discussion exposing (DiscussionStore, Slug)
+import Data.Discussion.Comment exposing (Comment)
 import Data.Game exposing (Game)
 import Data.User exposing (User, UserFull, UserId)
 import Dict exposing (Dict)
@@ -26,7 +26,7 @@ type alias FrontendModel =
 type alias BackendModel =
     { sessions : Dict SessionId Session
     , users : Dict Int UserFull
-    , articles : Dict Slug ArticleStore
+    , discussions : Dict Slug DiscussionStore
     , comments : Dict Slug (Dict Int Comment)
     , game : Game
     , daysPassed : Int
@@ -52,8 +52,8 @@ type alias ToBackend =
 type BackendMsg
     = CheckSession SessionId ClientId
     | RenewSession UserId SessionId ClientId Time.Posix
-    | ArticleCreated Time.Posix (Maybe UserFull) ClientId { title : String, description : String, body : String, tags : List String }
-    | ArticleCommentCreated Time.Posix (Maybe UserFull) ClientId Slug { body : String }
+    | DiscussionCreated Time.Posix (Maybe UserFull) ClientId { title : String, description : String, body : String, tags : List String }
+    | DiscussionCommentCreated Time.Posix (Maybe UserFull) ClientId Slug { body : String }
     | NoOpBackendMsg
     | DayPassed
 

@@ -1,6 +1,6 @@
 module Bridge exposing (..)
 
-import Data.Article.Filters exposing (Filters)
+import Data.Discussion.Filters exposing (Filters)
 import Data.User exposing (User)
 import Lamdera
 
@@ -13,35 +13,35 @@ type ToBackend
     = SignedOut User
       -- Req/resp paired messages
     | GetTags_Home_
-    | ArticleList_Home_ { filters : Filters, page : Int }
-    | ArticleFeed_Home_ { page : Int }
-    | ArticleList_Username_ { filters : Filters, page : Int }
-    | ArticleGet_Editor__ArticleSlug_ { slug : String }
-    | ArticleGet_Article__Slug_ { slug : String }
-    | ArticleCreate_Editor
-        { article :
+    | DiscussionList_Home_ { filters : Filters, page : Int }
+    | DiscussionFeed_Home_ { page : Int }
+    | DiscussionList_Username_ { filters : Filters, page : Int }
+    | DiscussionGet_Editor__DiscussionSlug_ { slug : String }
+    | DiscussionGet_Discussion__Slug_ { slug : String }
+    | DiscussionCreate_Editor
+        { discussion :
             { title : String, description : String, body : String, tags : List String }
         }
-    | ArticleUpdate_Editor__ArticleSlug_
+    | DiscussionUpdate_Editor__DiscussionSlug_
         { slug : String
         , updates :
             { title : String, description : String, body : String, tags : List String }
         }
-    | ArticleDelete_Article__Slug_ { slug : String }
-    | ArticleFavorite_Profile__Id_ { slug : String }
-    | ArticleUnfavorite_Profile__Id_ { slug : String }
-    | ArticleFavorite_Home_ { slug : String }
-    | ArticleUnfavorite_Home_ { slug : String }
-    | ArticleFavorite_Article__Slug_ { slug : String }
-    | ArticleUnfavorite_Article__Slug_ { slug : String }
-    | ArticleCommentGet_Article__Slug_ { articleSlug : String }
-    | ArticleCommentCreate_Article__Slug_ { articleSlug : String, comment : { body : String } }
-    | ArticleCommentDelete_Article__Slug_ { articleSlug : String, commentId : Int }
+    | DiscussionDelete_Discussion__Slug_ { slug : String }
+    | DiscussionFavorite_Profile__Id_ { slug : String }
+    | DiscussionUnfavorite_Profile__Id_ { slug : String }
+    | DiscussionFavorite_Home_ { slug : String }
+    | DiscussionUnfavorite_Home_ { slug : String }
+    | DiscussionFavorite_Discussion__Slug_ { slug : String }
+    | DiscussionUnfavorite_Discussion__Slug_ { slug : String }
+    | DiscussionCommentGet_Discussion__Slug_ { discussionSlug : String }
+    | DiscussionCommentCreate_Discussion__Slug_ { discussionSlug : String, comment : { body : String } }
+    | DiscussionCommentDelete_Discussion__Slug_ { discussionSlug : String, commentId : Int }
     | ProfileGet_Profile__Id_ { id : Int }
     | ProfileFollow_Profile__Id_ { id : Int }
     | ProfileUnfollow_Profile__Id_ { id : Int }
-    | ProfileFollow_Article__Slug_ { id : Int }
-    | ProfileUnfollow_Article__Slug_ { id : Int }
+    | ProfileFollow_Discussion__Slug_ { id : Int }
+    | ProfileUnfollow_Discussion__Slug_ { id : Int }
     | UserAuthentication_Login { params : { email : String, password : String } }
     | UserRegistration_Register { params : { username : String, email : String, password : String } }
     | UserUpdate_Settings

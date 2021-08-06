@@ -6,7 +6,7 @@ module Data.User exposing (..)
 
 -}
 
-import Data.Article exposing (Slug)
+import Data.Discussion exposing (Slug)
 import Data.Game exposing (Game)
 import Data.Game.Player exposing (Player)
 import Data.Game.Pointer as Pointer exposing (Pointer)

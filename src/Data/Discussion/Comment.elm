@@ -1,4 +1,4 @@
-module Data.Article.Comment exposing (Comment)
+module Data.Discussion.Comment exposing (Comment)
 
 {-|
 

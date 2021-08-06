@@ -1,23 +1,23 @@
 module Gen.Model exposing (Model(..))
 
+import Gen.Params.Discussion.Slug_
 import Gen.Params.Editor
+import Gen.Params.Editor.DiscussionSlug_
 import Gen.Params.Home_
 import Gen.Params.Login
 import Gen.Params.NotFound
+import Gen.Params.Profile.Id_
 import Gen.Params.Register
 import Gen.Params.Settings
-import Gen.Params.Article.Slug_
-import Gen.Params.Editor.ArticleSlug_
-import Gen.Params.Profile.Id_
+import Pages.Discussion.Slug_
 import Pages.Editor
+import Pages.Editor.DiscussionSlug_
 import Pages.Home_
 import Pages.Login
 import Pages.NotFound
+import Pages.Profile.Id_
 import Pages.Register
 import Pages.Settings
-import Pages.Article.Slug_
-import Pages.Editor.ArticleSlug_
-import Pages.Profile.Id_
 
 
 type Model
@@ -28,7 +28,6 @@ type Model
     | NotFound Gen.Params.NotFound.Params
     | Register Gen.Params.Register.Params Pages.Register.Model
     | Settings Gen.Params.Settings.Params Pages.Settings.Model
-    | Article__Slug_ Gen.Params.Article.Slug_.Params Pages.Article.Slug_.Model
-    | Editor__ArticleSlug_ Gen.Params.Editor.ArticleSlug_.Params Pages.Editor.ArticleSlug_.Model
+    | Discussion__Slug_ Gen.Params.Discussion.Slug_.Params Pages.Discussion.Slug_.Model
+    | Editor__DiscussionSlug_ Gen.Params.Editor.DiscussionSlug_.Params Pages.Editor.DiscussionSlug_.Model
     | Profile__Id_ Gen.Params.Profile.Id_.Params Pages.Profile.Id_.Model
-

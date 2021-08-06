@@ -2,8 +2,8 @@ module Pages.Profile.Id_ exposing (Model, Msg(..), page)
 
 import Bridge exposing (..)
 import Config.View
-import Data.Article exposing (Article)
-import Data.Article.Filters as Filters
+import Data.Discussion exposing (Discussion)
+import Data.Discussion.Filters as Filters
 import Data.Profile exposing (Profile)
 import Data.Response exposing (Response)
 import Data.User exposing (User)
@@ -40,15 +40,15 @@ page shared req =
 type alias Model =
     { id : Int
     , profile : Response Profile
-    , listing : Response Data.Article.Listing
+    , listing : Response Data.Discussion.Listing
     , selectedTab : Tab
     , page : Int
     }
 
 
 type Tab
-    = MyArticles
-    | FavoritedArticles
+    = MyDiscussions
+    | FavoritedDiscussions
 
 
 init : Shared.Model -> Request.With Params -> ( Model, Cmd Msg )
@@ -60,29 +60,29 @@ init shared { params } =
     ( { id = id
       , profile = Data.Response.Loading
       , listing = Data.Response.Loading
-      , selectedTab = MyArticles
+      , selectedTab = MyDiscussions
       , page = 1
       }
     , Cmd.batch
         [ ProfileGet_Profile__Id_ { id = id }
             |> sendToBackend
-        , fetchArticlesBy id 1
+        , fetchDiscussionsBy id 1
         ]
     )
 
 
-fetchArticlesBy : Int -> Int -> Cmd Msg
-fetchArticlesBy user_id page_ =
-    ArticleList_Username_
+fetchDiscussionsBy : Int -> Int -> Cmd Msg
+fetchDiscussionsBy user_id page_ =
+    DiscussionList_Username_
         { page = page_
         , filters = Filters.create |> Filters.withAuthor user_id
         }
         |> sendToBackend
 
 
-fetchArticlesFavoritedBy : Int -> Int -> Cmd Msg
-fetchArticlesFavoritedBy user_id page_ =
-    ArticleList_Username_
+fetchDiscussionsFavoritedBy : Int -> Int -> Cmd Msg
+fetchDiscussionsFavoritedBy user_id page_ =
+    DiscussionList_Username_
         { page = page_
         , filters =
             Filters.create |> Filters.favoritedBy user_id
@@ -96,11 +96,11 @@ fetchArticlesFavoritedBy user_id page_ =
 
 type Msg
     = GotProfile (Response Profile)
-    | GotArticles (Response Data.Article.Listing)
+    | GotDiscussions (Response Data.Discussion.Listing)
     | Clicked Tab
-    | ClickedFavorite User Article
-    | ClickedUnfavorite User Article
-    | UpdatedArticle (Response Article)
+    | ClickedFavorite User Discussion
+    | ClickedUnfavorite User Discussion
+    | UpdatedDiscussion (Response Discussion)
     | ClickedFollow User Profile
     | ClickedUnfollow User Profile
     | ClickedPage Int
@@ -130,41 +130,41 @@ update shared msg model =
                 |> sendToBackend
             )
 
-        GotArticles listing ->
+        GotDiscussions listing ->
             ( { model | listing = listing }
             , Cmd.none
             )
 
-        Clicked MyArticles ->
+        Clicked MyDiscussions ->
             ( { model
-                | selectedTab = MyArticles
+                | selectedTab = MyDiscussions
                 , listing = Data.Response.Loading
                 , page = 1
               }
-            , fetchArticlesBy model.id 1
+            , fetchDiscussionsBy model.id 1
             )
 
-        Clicked FavoritedArticles ->
+        Clicked FavoritedDiscussions ->
             ( { model
-                | selectedTab = FavoritedArticles
+                | selectedTab = FavoritedDiscussions
                 , listing = Data.Response.Loading
                 , page = 1
               }
-            , fetchArticlesFavoritedBy model.id 1
+            , fetchDiscussionsFavoritedBy model.id 1
             )
 
-        ClickedFavorite user article ->
+        ClickedFavorite user discussion ->
             ( model
-            , ArticleFavorite_Profile__Id_
-                { slug = article.slug
+            , DiscussionFavorite_Profile__Id_
+                { slug = discussion.slug
                 }
                 |> sendToBackend
             )
 
-        ClickedUnfavorite user article ->
+        ClickedUnfavorite user discussion ->
             ( model
-            , ArticleUnfavorite_Profile__Id_
-                { slug = article.slug
+            , DiscussionUnfavorite_Profile__Id_
+                { slug = discussion.slug
                 }
                 |> sendToBackend
             )
@@ -174,11 +174,11 @@ update shared msg model =
                 fetch : Int -> Int -> Cmd Msg
                 fetch =
                     case model.selectedTab of
-                        MyArticles ->
-                            fetchArticlesBy
+                        MyDiscussions ->
+                            fetchDiscussionsBy
 
-                        FavoritedArticles ->
-                            fetchArticlesFavoritedBy
+                        FavoritedDiscussions ->
+                            fetchDiscussionsFavoritedBy
             in
             ( { model
                 | listing = Data.Response.Loading
@@ -189,16 +189,16 @@ update shared msg model =
                 page_
             )
 
-        UpdatedArticle (Data.Response.Success article) ->
+        UpdatedDiscussion (Data.Response.Success discussion) ->
             ( { model
                 | listing =
-                    Data.Response.map (Data.Article.updateArticle article)
+                    Data.Response.map (Data.Discussion.updateDiscussion discussion)
                         model.listing
               }
             , Cmd.none
             )
 
-        UpdatedArticle _ ->
+        UpdatedDiscussion _ ->
             ( model, Cmd.none )
 
 
@@ -236,9 +236,9 @@ viewProfile shared profile model =
 
         viewTabRow : Html Msg
         viewTabRow =
-            div [ class "articles-toggle" ]
+            div [ class "discussions-toggle" ]
                 [ ul [ class "nav nav-pills outline-active" ]
-                    (List.map viewTab [ MyArticles, FavoritedArticles ])
+                    (List.map viewTab [ MyDiscussions, FavoritedDiscussions ])
                 ]
 
         viewTab : Tab -> Html Msg
@@ -251,11 +251,11 @@ viewProfile shared profile model =
                     ]
                     [ text
                         (case tab of
-                            MyArticles ->
-                                "My Articles"
+                            MyDiscussions ->
+                                "My Discussions"
 
-                            FavoritedArticles ->
-                                "Favorited Articles"
+                            FavoritedDiscussions ->
+                                "Favorited Discussions"
                         )
                     ]
                 ]

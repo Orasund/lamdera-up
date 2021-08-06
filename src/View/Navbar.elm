@@ -29,8 +29,7 @@ view options =
         menu =
             case options.user of
                 Just user ->
-                    [ ( "New Article", Route.Editor )
-                    , ( "Profil", Route.Profile__Id_ { id = user.id |> String.fromInt } )
+                    [ ( "Profil", Route.Profile__Id_ { id = user.id |> String.fromInt } )
                     ]
 
                 Nothing ->

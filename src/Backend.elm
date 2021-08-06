@@ -1,21 +1,21 @@
 module Backend exposing (..)
 
 import Bridge exposing (..)
-import Data.Article exposing (Article, ArticleStore, Slug)
-import Data.Article.Filters as Filters exposing (Filters(..))
+import Data.Discussion exposing (Discussion, DiscussionStore, Slug)
+import Data.Discussion.Filters as Filters exposing (Filters(..))
 import Data.Game as Game
 import Data.Game.Player as Player
 import Data.Profile exposing (Profile)
 import Data.Response exposing (Response(..))
-import Data.User as User exposing (Email, UserFull)
+import Data.User as User exposing (UserFull)
 import Dict
 import Dict.Extra as Dict
 import Gen.Msg
 import Lamdera exposing (..)
 import List.Extra as List
-import Pages.Article.Slug_
+import Pages.Discussion.Slug_
 import Pages.Editor
-import Pages.Editor.ArticleSlug_
+import Pages.Editor.DiscussionSlug_
 import Pages.Home_
 import Pages.Login
 import Pages.Profile.Id_
@@ -44,7 +44,7 @@ init : ( Model, Cmd BackendMsg )
 init =
     ( { sessions = Dict.empty
       , users = Dict.empty
-      , articles = Dict.empty
+      , discussions = Dict.empty
       , comments = Dict.empty
       , game = Game.init
       , daysPassed = 0
@@ -76,34 +76,34 @@ update msg model =
             , Time.now |> Task.perform (always (CheckSession sid cid))
             )
 
-        ArticleCreated t userM clientId article ->
+        DiscussionCreated t userM clientId discussion ->
             case userM of
                 Just user ->
                     let
-                        article_ =
-                            { slug = uniqueSlug model article.title 1
-                            , title = article.title
-                            , description = article.description
-                            , body = article.body
-                            , tags = article.tags
+                        discussion_ =
+                            { slug = uniqueSlug model discussion.title 1
+                            , title = discussion.title
+                            , description = discussion.description
+                            , body = discussion.body
+                            , tags = discussion.tags
                             , createdAt = t
                             , updatedAt = t
                             , userId = user.id
                             }
 
                         res =
-                            Success <| loadArticleFromStore model userM article_
+                            Success <| loadDiscussionFromStore model userM discussion_
                     in
-                    ( { model | articles = model.articles |> Dict.insert article_.slug article_ }
-                    , sendToFrontend clientId (PageMsg (Gen.Msg.Editor (Pages.Editor.GotArticle res)))
+                    ( { model | discussions = model.discussions |> Dict.insert discussion_.slug discussion_ }
+                    , sendToFrontend clientId (PageMsg (Gen.Msg.Editor (Pages.Editor.GotDiscussion res)))
                     )
 
                 Nothing ->
                     ( model
-                    , sendToFrontend clientId (PageMsg (Gen.Msg.Editor (Pages.Editor.GotArticle (Failure [ "invalid session" ]))))
+                    , sendToFrontend clientId (PageMsg (Gen.Msg.Editor (Pages.Editor.GotDiscussion (Failure [ "invalid session" ]))))
                     )
 
-        ArticleCommentCreated t userM clientId slug commentBody ->
+        DiscussionCommentCreated t userM clientId slug commentBody ->
             case userM of
                 Just user ->
                     let
@@ -128,12 +128,12 @@ update msg model =
                                     )
                     in
                     ( { model | comments = newComments }
-                    , sendToFrontend clientId (PageMsg (Gen.Msg.Article__Slug_ (Pages.Article.Slug_.CreatedComment (Success comment))))
+                    , sendToFrontend clientId (PageMsg (Gen.Msg.Discussion__Slug_ (Pages.Discussion.Slug_.CreatedComment (Success comment))))
                     )
 
                 Nothing ->
                     ( model
-                    , sendToFrontend clientId (PageMsg (Gen.Msg.Editor (Pages.Editor.GotArticle (Failure [ "invalid session" ]))))
+                    , sendToFrontend clientId (PageMsg (Gen.Msg.Editor (Pages.Editor.GotDiscussion (Failure [ "invalid session" ]))))
                     )
 
         NoOpBackendMsg ->
@@ -159,28 +159,28 @@ updateFromFrontend sessionId clientId msg model =
         send_ v =
             sendToFrontend clientId v
 
-        onlyWhenArticleOwner slug fn =
-            onlyWhenArticleOwner_ slug (\r -> ( model, sendToFrontend clientId (fn r) ))
+        onlyWhenDiscussionOwner slug fn =
+            onlyWhenDiscussionOwner_ slug (\r -> ( model, sendToFrontend clientId (fn r) ))
 
-        onlyWhenArticleOwner_ slug fn =
+        onlyWhenDiscussionOwner_ slug fn =
             let
                 res =
-                    model |> loadArticleBySlug slug sessionId
+                    model |> loadDiscussionBySlug slug sessionId
 
                 userM =
                     model |> getSessionUser sessionId
             in
             fn <|
                 case ( res, userM ) of
-                    ( Success article, Just user ) ->
-                        if article.author.username == user.email then
+                    ( Success discussion, Just user ) ->
+                        if discussion.author.username == user.email then
                             res
 
                         else
-                            Failure [ "you do not have permission for this article" ]
+                            Failure [ "you do not have permission for this discussion" ]
 
                     _ ->
-                        Failure [ "you do not have permission for this article" ]
+                        Failure [ "you do not have permission for this discussion" ]
     in
     case msg of
         SignedOut user ->
@@ -189,164 +189,164 @@ updateFromFrontend sessionId clientId msg model =
         GetTags_Home_ ->
             let
                 allTags =
-                    model.articles |> Dict.foldl (\slug article tags -> tags ++ article.tags) [] |> List.unique
+                    model.discussions |> Dict.foldl (\slug discussion tags -> tags ++ discussion.tags) [] |> List.unique
             in
             send (PageMsg (Gen.Msg.Home_ (Pages.Home_.GotTags (Success allTags))))
 
-        ArticleList_Home_ { filters, page } ->
+        DiscussionList_Home_ { filters, page } ->
             let
-                articleList =
+                discussionList =
                     getListing model sessionId filters page
             in
-            send (PageMsg (Gen.Msg.Home_ (Pages.Home_.GotArticles (Success articleList))))
+            send (PageMsg (Gen.Msg.Home_ (Pages.Home_.GotDiscussions (Success discussionList))))
 
-        ArticleFeed_Home_ { page } ->
+        DiscussionFeed_Home_ { page } ->
             let
                 userM =
                     model |> getSessionUser sessionId
 
-                articleList =
+                discussionList =
                     case userM of
                         Just user ->
                             let
                                 filtered =
-                                    model.articles
-                                        |> Dict.filter (\slug article -> List.member article.userId user.following)
+                                    model.discussions
+                                        |> Dict.filter (\slug discussion -> List.member discussion.userId user.following)
 
                                 enriched =
-                                    filtered |> Dict.map (\slug article -> loadArticleFromStore model userM article)
+                                    filtered |> Dict.map (\slug discussion -> loadDiscussionFromStore model userM discussion)
 
                                 grouped =
-                                    enriched |> Dict.values |> List.greedyGroupsOf Data.Article.itemsPerPage
+                                    enriched |> Dict.values |> List.greedyGroupsOf Data.Discussion.itemsPerPage
 
-                                articles =
+                                discussions =
                                     grouped |> List.getAt (page - 1) |> Maybe.withDefault []
                             in
-                            { articles = articles
+                            { discussions = discussions
                             , page = page
                             , totalPages = grouped |> List.length
                             }
 
                         Nothing ->
-                            { articles = [], page = 0, totalPages = 0 }
+                            { discussions = [], page = 0, totalPages = 0 }
             in
-            send (PageMsg (Gen.Msg.Home_ (Pages.Home_.GotArticles (Success articleList))))
+            send (PageMsg (Gen.Msg.Home_ (Pages.Home_.GotDiscussions (Success discussionList))))
 
-        ArticleList_Username_ { filters, page } ->
+        DiscussionList_Username_ { filters, page } ->
             let
-                articleList =
+                discussionList =
                     getListing model sessionId filters page
             in
-            send (PageMsg (Gen.Msg.Profile__Id_ (Pages.Profile.Id_.GotArticles (Success articleList))))
+            send (PageMsg (Gen.Msg.Profile__Id_ (Pages.Profile.Id_.GotDiscussions (Success discussionList))))
 
-        ArticleGet_Editor__ArticleSlug_ { slug } ->
-            onlyWhenArticleOwner slug
-                (\r -> PageMsg (Gen.Msg.Editor__ArticleSlug_ (Pages.Editor.ArticleSlug_.LoadedInitialArticle r)))
+        DiscussionGet_Editor__DiscussionSlug_ { slug } ->
+            onlyWhenDiscussionOwner slug
+                (\r -> PageMsg (Gen.Msg.Editor__DiscussionSlug_ (Pages.Editor.DiscussionSlug_.LoadedInitialDiscussion r)))
 
-        ArticleUpdate_Editor__ArticleSlug_ { slug, updates } ->
+        DiscussionUpdate_Editor__DiscussionSlug_ { slug, updates } ->
             let
-                articles =
-                    model.articles
+                discussions =
+                    model.discussions
                         |> Dict.update slug
                             (Maybe.map
                                 (\a -> { a | title = updates.title, body = updates.body, tags = updates.tags })
                             )
 
                 res =
-                    articles
+                    discussions
                         |> Dict.get slug
                         |> Maybe.map Success
-                        |> Maybe.withDefault (Failure [ "no article with slug: " ++ slug ])
-                        |> Data.Response.map (loadArticleFromStore model (model |> getSessionUser sessionId))
+                        |> Maybe.withDefault (Failure [ "no discussion with slug: " ++ slug ])
+                        |> Data.Response.map (loadDiscussionFromStore model (model |> getSessionUser sessionId))
             in
-            ( { model | articles = articles }, send_ (PageMsg (Gen.Msg.Editor__ArticleSlug_ (Pages.Editor.ArticleSlug_.UpdatedArticle res))) )
+            ( { model | discussions = discussions }, send_ (PageMsg (Gen.Msg.Editor__DiscussionSlug_ (Pages.Editor.DiscussionSlug_.UpdatedDiscussion res))) )
 
-        ArticleGet_Article__Slug_ { slug } ->
+        DiscussionGet_Discussion__Slug_ { slug } ->
             let
                 res =
-                    model |> loadArticleBySlug slug sessionId
+                    model |> loadDiscussionBySlug slug sessionId
             in
-            send (PageMsg (Gen.Msg.Article__Slug_ (Pages.Article.Slug_.GotArticle res)))
+            send (PageMsg (Gen.Msg.Discussion__Slug_ (Pages.Discussion.Slug_.GotDiscussion res)))
 
-        ArticleCreate_Editor { article } ->
+        DiscussionCreate_Editor { discussion } ->
             let
                 userM =
                     model |> getSessionUser sessionId
             in
-            ( model, Time.now |> Task.perform (\t -> ArticleCreated t userM clientId article) )
+            ( model, Time.now |> Task.perform (\t -> DiscussionCreated t userM clientId discussion) )
 
-        ArticleDelete_Article__Slug_ { slug } ->
-            onlyWhenArticleOwner_ slug
+        DiscussionDelete_Discussion__Slug_ { slug } ->
+            onlyWhenDiscussionOwner_ slug
                 (\r ->
-                    ( { model | articles = model.articles |> Dict.remove slug }
-                    , send_ (PageMsg (Gen.Msg.Article__Slug_ (Pages.Article.Slug_.DeletedArticle r)))
+                    ( { model | discussions = model.discussions |> Dict.remove slug }
+                    , send_ (PageMsg (Gen.Msg.Discussion__Slug_ (Pages.Discussion.Slug_.DeletedDiscussion r)))
                     )
                 )
 
-        ArticleFavorite_Profile__Id_ { slug } ->
-            favoriteArticle sessionId
+        DiscussionFavorite_Profile__Id_ { slug } ->
+            favoriteDiscussion sessionId
                 slug
                 model
-                (\r -> send_ (PageMsg (Gen.Msg.Profile__Id_ (Pages.Profile.Id_.UpdatedArticle r))))
+                (\r -> send_ (PageMsg (Gen.Msg.Profile__Id_ (Pages.Profile.Id_.UpdatedDiscussion r))))
 
-        ArticleUnfavorite_Profile__Id_ { slug } ->
-            unfavoriteArticle sessionId
+        DiscussionUnfavorite_Profile__Id_ { slug } ->
+            unfavoriteDiscussion sessionId
                 slug
                 model
-                (\r -> send_ (PageMsg (Gen.Msg.Profile__Id_ (Pages.Profile.Id_.UpdatedArticle r))))
+                (\r -> send_ (PageMsg (Gen.Msg.Profile__Id_ (Pages.Profile.Id_.UpdatedDiscussion r))))
 
-        ArticleFavorite_Home_ { slug } ->
-            favoriteArticle sessionId
+        DiscussionFavorite_Home_ { slug } ->
+            favoriteDiscussion sessionId
                 slug
                 model
-                (\r -> send_ (PageMsg (Gen.Msg.Home_ (Pages.Home_.UpdatedArticle r))))
+                (\r -> send_ (PageMsg (Gen.Msg.Home_ (Pages.Home_.UpdatedDiscussion r))))
 
-        ArticleUnfavorite_Home_ { slug } ->
-            unfavoriteArticle sessionId
+        DiscussionUnfavorite_Home_ { slug } ->
+            unfavoriteDiscussion sessionId
                 slug
                 model
-                (\r -> send_ (PageMsg (Gen.Msg.Home_ (Pages.Home_.UpdatedArticle r))))
+                (\r -> send_ (PageMsg (Gen.Msg.Home_ (Pages.Home_.UpdatedDiscussion r))))
 
-        ArticleFavorite_Article__Slug_ { slug } ->
-            favoriteArticle sessionId
+        DiscussionFavorite_Discussion__Slug_ { slug } ->
+            favoriteDiscussion sessionId
                 slug
                 model
-                (\r -> send_ (PageMsg (Gen.Msg.Article__Slug_ (Pages.Article.Slug_.GotArticle r))))
+                (\r -> send_ (PageMsg (Gen.Msg.Discussion__Slug_ (Pages.Discussion.Slug_.GotDiscussion r))))
 
-        ArticleUnfavorite_Article__Slug_ { slug } ->
-            unfavoriteArticle sessionId
+        DiscussionUnfavorite_Discussion__Slug_ { slug } ->
+            unfavoriteDiscussion sessionId
                 slug
                 model
-                (\r -> send_ (PageMsg (Gen.Msg.Article__Slug_ (Pages.Article.Slug_.GotArticle r))))
+                (\r -> send_ (PageMsg (Gen.Msg.Discussion__Slug_ (Pages.Discussion.Slug_.GotDiscussion r))))
 
-        ArticleCommentGet_Article__Slug_ { articleSlug } ->
+        DiscussionCommentGet_Discussion__Slug_ { discussionSlug } ->
             let
                 res =
                     model.comments
-                        |> Dict.get articleSlug
+                        |> Dict.get discussionSlug
                         |> Maybe.map Dict.values
                         |> Maybe.map (List.sortBy .id)
                         |> Maybe.map List.reverse
                         |> Maybe.map Success
                         |> Maybe.withDefault (Success [])
             in
-            send (PageMsg (Gen.Msg.Article__Slug_ (Pages.Article.Slug_.GotComments res)))
+            send (PageMsg (Gen.Msg.Discussion__Slug_ (Pages.Discussion.Slug_.GotComments res)))
 
-        ArticleCommentCreate_Article__Slug_ { articleSlug, comment } ->
+        DiscussionCommentCreate_Discussion__Slug_ { discussionSlug, comment } ->
             let
                 userM =
                     model |> getSessionUser sessionId
             in
-            ( model, Time.now |> Task.perform (\t -> ArticleCommentCreated t userM clientId articleSlug comment) )
+            ( model, Time.now |> Task.perform (\t -> DiscussionCommentCreated t userM clientId discussionSlug comment) )
 
-        ArticleCommentDelete_Article__Slug_ { articleSlug, commentId } ->
+        DiscussionCommentDelete_Discussion__Slug_ { discussionSlug, commentId } ->
             let
                 newComments =
                     model.comments
-                        |> Dict.update articleSlug (Maybe.map (\comments -> Dict.remove commentId comments))
+                        |> Dict.update discussionSlug (Maybe.map (\comments -> Dict.remove commentId comments))
             in
             ( { model | comments = newComments }
-            , send_ (PageMsg (Gen.Msg.Article__Slug_ (Pages.Article.Slug_.DeletedComment (Success commentId))))
+            , send_ (PageMsg (Gen.Msg.Discussion__Slug_ (Pages.Discussion.Slug_.DeletedComment (Success commentId))))
             )
 
         ProfileGet_Profile__Id_ { id } ->
@@ -370,17 +370,17 @@ updateFromFrontend sessionId clientId msg model =
                 model
                 (\r -> send_ (PageMsg (Gen.Msg.Profile__Id_ (Pages.Profile.Id_.GotProfile r))))
 
-        ProfileFollow_Article__Slug_ { id } ->
+        ProfileFollow_Discussion__Slug_ { id } ->
             followUser sessionId
                 id
                 model
-                (\r -> send_ (PageMsg (Gen.Msg.Article__Slug_ (Pages.Article.Slug_.GotAuthor r))))
+                (\r -> send_ (PageMsg (Gen.Msg.Discussion__Slug_ (Pages.Discussion.Slug_.GotAuthor r))))
 
-        ProfileUnfollow_Article__Slug_ { id } ->
+        ProfileUnfollow_Discussion__Slug_ { id } ->
             unfollowUser sessionId
                 id
                 model
-                (\r -> send_ (PageMsg (Gen.Msg.Article__Slug_ (Pages.Article.Slug_.GotAuthor r))))
+                (\r -> send_ (PageMsg (Gen.Msg.Discussion__Slug_ (Pages.Discussion.Slug_.GotAuthor r))))
 
         UserAuthentication_Login { params } ->
             let
@@ -477,37 +477,37 @@ renewSession email sid cid =
     Time.now |> Task.perform (RenewSession email sid cid)
 
 
-getListing : Model -> SessionId -> Filters -> Int -> Data.Article.Listing
+getListing : Model -> SessionId -> Filters -> Int -> Data.Discussion.Listing
 getListing model sessionId (Filters { tag, author, favorited }) page =
     let
         filtered =
-            model.articles
+            model.discussions
                 |> Filters.byFavorite favorited model.users
                 |> Filters.byTag tag
                 |> Filters.byAuthor author model.users
 
         enriched =
-            filtered |> Dict.map (\slug article -> loadArticleFromStore model (model |> getSessionUser sessionId) article)
+            filtered |> Dict.map (\slug discussion -> loadDiscussionFromStore model (model |> getSessionUser sessionId) discussion)
 
         grouped =
-            enriched |> Dict.values |> List.greedyGroupsOf Data.Article.itemsPerPage
+            enriched |> Dict.values |> List.greedyGroupsOf Data.Discussion.itemsPerPage
 
-        articles =
+        discussions =
             grouped |> List.getAt (page - 1) |> Maybe.withDefault []
     in
-    { articles = articles
+    { discussions = discussions
     , page = page
     , totalPages = grouped |> List.length
     }
 
 
-loadArticleBySlug : String -> SessionId -> Model -> Response Article
-loadArticleBySlug slug sid model =
-    model.articles
+loadDiscussionBySlug : String -> SessionId -> Model -> Response Discussion
+loadDiscussionBySlug slug sid model =
+    model.discussions
         |> Dict.get slug
         |> Maybe.map Success
-        |> Maybe.withDefault (Failure [ "no article with slug: " ++ slug ])
-        |> Data.Response.map (loadArticleFromStore model (model |> getSessionUser sid))
+        |> Maybe.withDefault (Failure [ "no discussion with slug: " ++ slug ])
+        |> Data.Response.map (loadDiscussionFromStore model (model |> getSessionUser sid))
 
 
 uniqueSlug : Model -> String -> Int -> String
@@ -516,27 +516,27 @@ uniqueSlug model title i =
         slug =
             title |> String.replace " " "-"
     in
-    if not (model.articles |> Dict.member slug) then
+    if not (model.discussions |> Dict.member slug) then
         slug
 
-    else if not (model.articles |> Dict.member (slug ++ "-" ++ String.fromInt i)) then
+    else if not (model.discussions |> Dict.member (slug ++ "-" ++ String.fromInt i)) then
         slug ++ "-" ++ String.fromInt i
 
     else
         uniqueSlug model title (i + 1)
 
 
-favoriteArticle : SessionId -> Slug -> Model -> (Response Article -> Cmd msg) -> ( Model, Cmd msg )
-favoriteArticle sessionId slug model toResponseCmd =
+favoriteDiscussion : SessionId -> Slug -> Model -> (Response Discussion -> Cmd msg) -> ( Model, Cmd msg )
+favoriteDiscussion sessionId slug model toResponseCmd =
     let
         res =
             model
-                |> loadArticleBySlug slug sessionId
+                |> loadDiscussionBySlug slug sessionId
                 |> Data.Response.map (\a -> { a | favorited = True })
     in
     case model |> getSessionUser sessionId of
         Just user ->
-            ( if model.articles |> Dict.member slug then
+            ( if model.discussions |> Dict.member slug then
                 model |> updateUser { user | favorites = (slug :: user.favorites) |> List.unique }
 
               else
@@ -548,12 +548,12 @@ favoriteArticle sessionId slug model toResponseCmd =
             ( model, toResponseCmd <| Failure [ "invalid session" ] )
 
 
-unfavoriteArticle : SessionId -> Slug -> Model -> (Response Article -> Cmd msg) -> ( Model, Cmd msg )
-unfavoriteArticle sessionId slug model toResponseCmd =
+unfavoriteDiscussion : SessionId -> Slug -> Model -> (Response Discussion -> Cmd msg) -> ( Model, Cmd msg )
+unfavoriteDiscussion sessionId slug model toResponseCmd =
     let
         res =
             model
-                |> loadArticleBySlug slug sessionId
+                |> loadDiscussionBySlug slug sessionId
                 |> Data.Response.map (\a -> { a | favorited = False })
     in
     case model |> getSessionUser sessionId of
@@ -633,8 +633,8 @@ profileByEmail email model =
         |> Maybe.map (Tuple.second >> User.toProfile model.game)
 
 
-loadArticleFromStore : Model -> Maybe UserFull -> ArticleStore -> Article
-loadArticleFromStore model userM store =
+loadDiscussionFromStore : Model -> Maybe UserFull -> DiscussionStore -> Discussion
+loadDiscussionFromStore model userM store =
     let
         favorited =
             userM |> Maybe.map (\user -> user.favorites |> List.member store.slug) |> Maybe.withDefault False

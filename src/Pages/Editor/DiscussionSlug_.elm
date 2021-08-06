@@ -1,11 +1,11 @@
-module Pages.Editor.ArticleSlug_ exposing (Model, Msg(..), page)
+module Pages.Editor.DiscussionSlug_ exposing (Model, Msg(..), page)
 
 import Bridge exposing (..)
-import Data.Article exposing (Article)
+import Data.Discussion exposing (Discussion)
 import Data.Response exposing (Response)
 import Data.User exposing (User)
 import Element
-import Gen.Params.Editor.ArticleSlug_ exposing (Params)
+import Gen.Params.Editor.DiscussionSlug_ exposing (Params)
 import Gen.Route as Route
 import Html exposing (..)
 import Page
@@ -34,18 +34,18 @@ page shared req =
 type alias Model =
     { slug : String
     , form : Maybe Form
-    , article : Response Article
+    , discussion : Response Discussion
     }
 
 
 init : Shared.Model -> Request.With Params -> ( Model, Cmd Msg )
-init shared { params } =
-    ( { slug = params.articleSlug
+init _ { params } =
+    ( { slug = params.discussionSlug
       , form = Nothing
-      , article = Data.Response.Loading
+      , discussion = Data.Response.Loading
       }
-    , ArticleGet_Editor__ArticleSlug_
-        { slug = params.articleSlug
+    , DiscussionGet_Editor__DiscussionSlug_
+        { slug = params.discussionSlug
         }
         |> sendToBackend
     )
@@ -58,15 +58,15 @@ init shared { params } =
 type Msg
     = SubmittedForm User Form
     | Updated Field String
-    | UpdatedArticle (Response Article)
-    | LoadedInitialArticle (Response Article)
+    | UpdatedDiscussion (Response Discussion)
+    | LoadedInitialDiscussion (Response Discussion)
 
 
 update : Request.With Params -> Msg -> Model -> ( Model, Cmd Msg )
 update req msg model =
     case msg of
-        LoadedInitialArticle article ->
-            case article of
+        LoadedInitialDiscussion discussion ->
+            case discussion of
                 Data.Response.Success a ->
                     ( { model
                         | form =
@@ -95,7 +95,7 @@ update req msg model =
 
         SubmittedForm user form ->
             ( model
-            , ArticleUpdate_Editor__ArticleSlug_
+            , DiscussionUpdate_Editor__DiscussionSlug_
                 { slug = model.slug
                 , updates =
                     { title = form.title
@@ -110,12 +110,12 @@ update req msg model =
                 |> sendToBackend
             )
 
-        UpdatedArticle article ->
-            ( { model | article = article }
-            , case article of
-                Data.Response.Success newArticle ->
+        UpdatedDiscussion discussion ->
+            ( { model | discussion = discussion }
+            , case discussion of
+                Data.Response.Success newDiscussion ->
                     Utils.Route.navigate req.key
-                        (Route.Article__Slug_ { slug = newArticle.slug })
+                        (Route.Discussion__Slug_ { slug = newDiscussion.slug })
 
                 _ ->
                     Cmd.none
@@ -133,17 +133,17 @@ subscriptions _ =
 
 view : User -> Model -> View Msg
 view user model =
-    { title = "Editing Article"
+    { title = "Editing Discussion"
     , body =
         case model.form of
             Just form ->
                 View.Editor.view
                     { onFormSubmit = SubmittedForm user form
-                    , title = "Edit Article"
+                    , title = "Edit Discussion"
                     , form = form
                     , onUpdate = Updated
                     , buttonLabel = "Save"
-                    , article = model.article
+                    , discussion = model.discussion
                     }
 
             Nothing ->

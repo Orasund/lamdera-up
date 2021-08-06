@@ -1,18 +1,18 @@
-module Pages.Article.Slug_ exposing (Model, Msg(..), page)
+module Pages.Discussion.Slug_ exposing (Model, Msg(..), page)
 
 import Bridge exposing (..)
 import Config.View
-import Data.Article exposing (Article)
-import Data.Article.Comment exposing (Comment)
+import Data.Discussion exposing (Discussion)
+import Data.Discussion.Comment exposing (Comment)
 import Data.Profile exposing (Profile)
 import Data.Response exposing (Response)
 import Data.User exposing (User)
 import Effect exposing (Effect)
 import Element exposing (Element)
-import Gen.Params.Article.Slug_ exposing (Params)
+import Gen.Params.Discussion.Slug_ exposing (Params)
 import Gen.Route as Route exposing (Route)
 import Html exposing (..)
-import Html.Attributes exposing (class, href, src)
+import Html.Attributes exposing (class, href)
 import Markdown
 import Page
 import Request
@@ -42,7 +42,7 @@ page shared req =
 
 
 type alias Model =
-    { article : Response Article
+    { discussion : Response Discussion
     , comments : Response (List Comment)
     , commentText : String
     }
@@ -50,17 +50,17 @@ type alias Model =
 
 init : Shared.Model -> Request.With Params -> ( Model, Effect Msg )
 init shared { params } =
-    ( { article = Data.Response.Loading
+    ( { discussion = Data.Response.Loading
       , comments = Data.Response.Loading
       , commentText = ""
       }
     , Cmd.batch
-        [ ArticleGet_Article__Slug_
+        [ DiscussionGet_Discussion__Slug_
             { slug = params.slug
             }
             |> sendToBackend
-        , ArticleCommentGet_Article__Slug_
-            { articleSlug = params.slug
+        , DiscussionCommentGet_Discussion__Slug_
+            { discussionSlug = params.slug
             }
             |> sendToBackend
         ]
@@ -73,18 +73,18 @@ init shared { params } =
 
 
 type Msg
-    = GotArticle (Response Article)
-    | ClickedFavorite User Article
-    | ClickedUnfavorite User Article
-    | ClickedDeleteArticle User Article
-    | DeletedArticle (Response Article)
+    = GotDiscussion (Response Discussion)
+    | ClickedFavorite User Discussion
+    | ClickedUnfavorite User Discussion
+    | ClickedDeleteDiscussion User Discussion
+    | DeletedDiscussion (Response Discussion)
     | GotAuthor (Response Profile)
     | ClickedFollow User Profile
     | ClickedUnfollow User Profile
     | GotComments (Response (List Comment))
-    | ClickedDeleteComment User Article Comment
+    | ClickedDeleteComment User Discussion Comment
     | DeletedComment (Response Int)
-    | SubmittedCommentForm User Article
+    | SubmittedCommentForm User Discussion
     | CreatedComment (Response Comment)
     | UpdatedCommentText String
     | RequestedRouteChange Route
@@ -93,39 +93,39 @@ type Msg
 update : Request.With Params -> Msg -> Model -> ( Model, Effect Msg )
 update req msg model =
     case msg of
-        GotArticle article ->
-            ( { model | article = article }
+        GotDiscussion discussion ->
+            ( { model | discussion = discussion }
             , Effect.none
             )
 
-        ClickedFavorite user article ->
+        ClickedFavorite user discussion ->
             ( model
-            , ArticleFavorite_Article__Slug_
-                { slug = article.slug
+            , DiscussionFavorite_Discussion__Slug_
+                { slug = discussion.slug
                 }
                 |> sendToBackend
                 |> Effect.fromCmd
             )
 
-        ClickedUnfavorite user article ->
+        ClickedUnfavorite user discussion ->
             ( model
-            , ArticleUnfavorite_Article__Slug_
-                { slug = article.slug
+            , DiscussionUnfavorite_Discussion__Slug_
+                { slug = discussion.slug
                 }
                 |> sendToBackend
                 |> Effect.fromCmd
             )
 
-        ClickedDeleteArticle user article ->
+        ClickedDeleteDiscussion user discussion ->
             ( model
-            , ArticleDelete_Article__Slug_
-                { slug = article.slug
+            , DiscussionDelete_Discussion__Slug_
+                { slug = discussion.slug
                 }
                 |> sendToBackend
                 |> Effect.fromCmd
             )
 
-        DeletedArticle _ ->
+        DeletedDiscussion _ ->
             ( model
             , Utils.Route.navigate req.key Route.Home_
                 |> Effect.fromCmd
@@ -133,29 +133,29 @@ update req msg model =
 
         GotAuthor profile ->
             let
-                updateAuthor : Article -> Article
-                updateAuthor article =
+                updateAuthor : Discussion -> Discussion
+                updateAuthor discussion =
                     case profile of
                         Data.Response.Success author ->
-                            { article | author = author }
+                            { discussion | author = author }
 
                         _ ->
-                            article
+                            discussion
             in
-            ( { model | article = Data.Response.map updateAuthor model.article }
+            ( { model | discussion = Data.Response.map updateAuthor model.discussion }
             , Effect.none
             )
 
         ClickedFollow user profile ->
             ( model
-            , ProfileFollow_Article__Slug_ { id = profile.id }
+            , ProfileFollow_Discussion__Slug_ { id = profile.id }
                 |> sendToBackend
                 |> Effect.fromCmd
             )
 
         ClickedUnfollow user profile ->
             ( model
-            , ProfileUnfollow_Article__Slug_ { id = profile.id }
+            , ProfileUnfollow_Discussion__Slug_ { id = profile.id }
                 |> sendToBackend
                 |> Effect.fromCmd
             )
@@ -170,14 +170,14 @@ update req msg model =
             , Effect.none
             )
 
-        SubmittedCommentForm user article ->
+        SubmittedCommentForm user discussion ->
             if String.isEmpty model.commentText then
                 ( model, Effect.none )
 
             else
                 ( { model | commentText = "" }
-                , ArticleCommentCreate_Article__Slug_
-                    { articleSlug = article.slug
+                , DiscussionCommentCreate_Discussion__Slug_
+                    { discussionSlug = discussion.slug
                     , comment = { body = model.commentText }
                     }
                     |> sendToBackend
@@ -194,10 +194,10 @@ update req msg model =
             , Effect.none
             )
 
-        ClickedDeleteComment user article comment ->
+        ClickedDeleteComment user discussion comment ->
             ( model
-            , ArticleCommentDelete_Article__Slug_
-                { articleSlug = article.slug
+            , DiscussionCommentDelete_Discussion__Slug_
+                { discussionSlug = discussion.slug
                 , commentId = comment.id
                 }
                 |> sendToBackend
@@ -229,47 +229,47 @@ subscriptions _ =
 
 view : Shared.Model -> Model -> View Msg
 view shared model =
-    case model.article of
-        Data.Response.Success article ->
-            { title = article.title
-            , body = viewArticle shared model article
+    case model.discussion of
+        Data.Response.Success discussion ->
+            { title = discussion.title
+            , body = viewDiscussion shared model discussion
             }
 
         _ ->
-            { title = "Article"
+            { title = "Discussion"
             , body = Element.none
             }
 
 
-viewArticle : Shared.Model -> Model -> Article -> Element Msg
-viewArticle shared model article =
+viewDiscussion : Shared.Model -> Model -> Discussion -> Element Msg
+viewDiscussion shared model discussion =
     [ div [ class "container" ]
-        [ h1 [] [ text article.title ]
-        , viewArticleMeta shared model article
+        [ h1 [] [ text discussion.title ]
+        , viewDiscussionMeta shared discussion
         ]
         |> Element.html
         |> Element.el
             [ Element.width <| Element.fill
             , Element.htmlAttribute <| class "banner"
             ]
-    , [ div [ class "row article-content" ]
+    , [ div [ class "row discussion-content" ]
             [ div [ class "col-md-12" ]
-                [ Markdown.toHtml [] article.body ]
-            , if List.isEmpty article.tags then
+                [ Markdown.toHtml [] discussion.body ]
+            , if List.isEmpty discussion.tags then
                 text ""
 
               else
                 ul [ class "tag-list" ]
                     (List.map
                         (\tag -> li [ class "tag-default tag-pill tag-outline" ] [ text tag ])
-                        article.tags
+                        discussion.tags
                     )
             ]
             |> Element.html
       , hr [] [] |> Element.html
-      , div [ class "article-actions" ] [ viewArticleMeta shared model article ]
+      , div [ class "discussion-actions" ] [ viewDiscussionMeta shared discussion ]
             |> Element.html
-      , viewCommentSection shared model article
+      , viewCommentSection shared model discussion
       ]
         |> Element.column
             [ class "container page" |> Element.htmlAttribute
@@ -278,85 +278,85 @@ viewArticle shared model article =
     ]
         |> Element.column
             [ Element.width <| Element.fill
-            , class "article-page" |> Element.htmlAttribute
+            , class "discussion-page" |> Element.htmlAttribute
             ]
 
 
-viewArticleMeta : Shared.Model -> Model -> Article -> Html Msg
-viewArticleMeta shared model article =
-    div [ class "article-meta" ] <|
+viewDiscussionMeta : Shared.Model -> Discussion -> Html Msg
+viewDiscussionMeta shared discussion =
+    div [ class "discussion-meta" ] <|
         List.concat
             [ [ div [ class "info" ]
-                    [ a [ class "author", href ("/profile/" ++ article.author.username) ] [ text article.author.username ]
-                    , span [ class "date" ] [ text (Utils.Time.formatDate article.createdAt) ]
+                    [ a [ class "author", href ("/profile/" ++ discussion.author.username) ] [ text discussion.author.username ]
+                    , span [ class "date" ] [ text (Utils.Time.formatDate discussion.createdAt) ]
                     ]
               ]
             , case shared.user of
                 Just user ->
-                    viewControls article user
+                    viewControls discussion user
 
                 Nothing ->
                     []
             ]
 
 
-viewControls : Article -> User -> List (Html Msg)
-viewControls article user =
-    if article.author.username == user.username then
+viewControls : Discussion -> User -> List (Html Msg)
+viewControls discussion user =
+    if discussion.author.username == user.username then
         [ a
             [ class "btn btn-outline-secondary btn-sm"
-            , href ("/editor/" ++ article.slug)
+            , href ("/editor/" ++ discussion.slug)
             ]
             [ i [ class "ion-edit" ] []
-            , text "Edit article"
+            , text "Edit discussion"
             ]
         , IconButton.view
             { color = IconButton.OutlinedRed
             , icon = IconButton.Trash
-            , label = "Delete article"
-            , onClick = ClickedDeleteArticle user article
+            , label = "Delete discussion"
+            , onClick = ClickedDeleteDiscussion user discussion
             }
         ]
 
     else
-        [ if article.author.following then
+        [ if discussion.author.following then
             IconButton.view
                 { color = IconButton.FilledGray
                 , icon = IconButton.Plus
-                , label = "Unfollow " ++ article.author.username
-                , onClick = ClickedUnfollow user article.author
+                , label = "Unfollow " ++ discussion.author.username
+                , onClick = ClickedUnfollow user discussion.author
                 }
 
           else
             IconButton.view
                 { color = IconButton.OutlinedGray
                 , icon = IconButton.Plus
-                , label = "Follow " ++ article.author.username
-                , onClick = ClickedFollow user article.author
+                , label = "Follow " ++ discussion.author.username
+                , onClick = ClickedFollow user discussion.author
                 }
-        , if article.favorited then
+        , if discussion.favorited then
             IconButton.view
                 { color = IconButton.FilledGreen
                 , icon = IconButton.Heart
-                , label = "Unfavorite Post (" ++ String.fromInt article.favoritesCount ++ ")"
-                , onClick = ClickedUnfavorite user article
+                , label = "Unfavorite Post (" ++ String.fromInt discussion.favoritesCount ++ ")"
+                , onClick = ClickedUnfavorite user discussion
                 }
 
           else
             IconButton.view
                 { color = IconButton.OutlinedGreen
                 , icon = IconButton.Heart
-                , label = "Favorite Post (" ++ String.fromInt article.favoritesCount ++ ")"
-                , onClick = ClickedFavorite user article
+                , label = "Favorite Post (" ++ String.fromInt discussion.favoritesCount ++ ")"
+                , onClick = ClickedFavorite user discussion
                 }
         ]
 
 
-viewCommentSection : Shared.Model -> Model -> Article -> Element Msg
-viewCommentSection shared model article =
+viewCommentSection : Shared.Model -> Model -> Discussion -> Element Msg
+viewCommentSection shared model discussion =
     [ case model.comments of
         Data.Response.Success comments ->
-            List.map (viewComment shared.user article) comments
+            List.map (viewComment shared.user discussion) comments
                 |> Element.column
                     [ Element.fill
                         |> Element.maximum Config.View.maxWidth
@@ -367,7 +367,7 @@ viewCommentSection shared model article =
             Element.none
     , case shared.user of
         Just user ->
-            viewCommentForm model user article
+            viewCommentForm model user discussion
 
         Nothing ->
             Element.none
@@ -375,8 +375,8 @@ viewCommentSection shared model article =
         |> Element.column [ Element.width Element.fill ]
 
 
-viewCommentForm : Model -> User -> Article -> Element Msg
-viewCommentForm model user article =
+viewCommentForm : Model -> User -> Discussion -> Element Msg
+viewCommentForm model user discussion =
     [ View.Input.multiLineInput
         { onChange = UpdatedCommentText
         , text = model.commentText
@@ -384,7 +384,7 @@ viewCommentForm model user article =
         }
     , Widget.textButton (Material.containedButton Color.palette)
         { text = "Post Comment"
-        , onPress = Just <| SubmittedCommentForm user article
+        , onPress = Just <| SubmittedCommentForm user discussion
         }
         |> Element.el [ Element.alignRight, Element.width Element.fill ]
     ]
@@ -398,8 +398,8 @@ viewCommentForm model user article =
             )
 
 
-viewComment : Maybe User -> Article -> Comment -> Element Msg
-viewComment currentUser article comment =
+viewComment : Maybe User -> Discussion -> Comment -> Element Msg
+viewComment currentUser discussion comment =
     let
         viewCommentActions : Element Msg
         viewCommentActions =
@@ -408,7 +408,7 @@ viewComment currentUser article comment =
                     if user.username == comment.author.username then
                         Widget.textButton (Material.textButton Color.palette)
                             { text = "Delete"
-                            , onPress = Just <| ClickedDeleteComment user article comment
+                            , onPress = Just <| ClickedDeleteComment user discussion comment
                             }
 
                     else

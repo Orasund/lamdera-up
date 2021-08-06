@@ -1,7 +1,7 @@
 module Pages.Editor exposing (Model, Msg(..), page)
 
 import Bridge exposing (..)
-import Data.Article exposing (Article)
+import Data.Discussion exposing (Discussion)
 import Data.Response exposing (Response)
 import Data.User exposing (User)
 import Gen.Route as Route
@@ -30,7 +30,7 @@ page shared req =
 
 type alias Model =
     { form : Form
-    , article : Response Article
+    , discussion : Response Discussion
     }
 
 
@@ -42,7 +42,7 @@ init shared =
             , body = ""
             , tags = ""
             }
-      , article = Data.Response.NotAsked
+      , discussion = Data.Response.NotAsked
       }
     , Cmd.none
     )
@@ -55,7 +55,7 @@ init shared =
 type Msg
     = SubmittedForm User
     | Updated Field String
-    | GotArticle (Response Article)
+    | GotDiscussion (Response Discussion)
 
 
 update : Request -> Msg -> Model -> ( Model, Cmd Msg )
@@ -74,8 +74,8 @@ update req msg model =
 
         SubmittedForm user ->
             ( model
-            , ArticleCreate_Editor
-                { article =
+            , DiscussionCreate_Editor
+                { discussion =
                     { title = model.form.title
                     , description = model.form.description
                     , body = model.form.body
@@ -88,12 +88,12 @@ update req msg model =
                 |> sendToBackend
             )
 
-        GotArticle article ->
-            ( { model | article = article }
-            , case article of
-                Data.Response.Success newArticle ->
+        GotDiscussion discussion ->
+            ( { model | discussion = discussion }
+            , case discussion of
+                Data.Response.Success newDiscussion ->
                     Utils.Route.navigate req.key
-                        (Route.Article__Slug_ { slug = newArticle.slug })
+                        (Route.Discussion__Slug_ { slug = newDiscussion.slug })
 
                 _ ->
                     Cmd.none
@@ -111,14 +111,14 @@ subscriptions _ =
 
 view : User -> Model -> View Msg
 view user model =
-    { title = "New Article"
+    { title = "New Discussion"
     , body =
         View.Editor.view
             { onFormSubmit = SubmittedForm user
-            , title = "New Article"
+            , title = "New Discussion"
             , form = model.form
             , onUpdate = Updated
             , buttonLabel = "Publish"
-            , article = model.article
+            , discussion = model.discussion
             }
     }

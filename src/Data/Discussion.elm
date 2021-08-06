@@ -1,8 +1,8 @@
-module Data.Article exposing (..)
+module Data.Discussion exposing (..)
 
 {-|
 
-@docs Article, Listing, updateArticle, itemsPerPage
+@docs Discussion, Listing, updateDiscussion, itemsPerPage
 
 -}
 
@@ -10,7 +10,7 @@ import Data.Profile exposing (Profile)
 import Time
 
 
-type alias Article =
+type alias Discussion =
     { slug : Slug
     , title : String
     , description : String
@@ -24,7 +24,7 @@ type alias Article =
     }
 
 
-type alias ArticleStore =
+type alias DiscussionStore =
     { slug : Slug
     , title : String
     , description : String
@@ -41,28 +41,28 @@ type alias Slug =
 
 
 type alias Listing =
-    { articles : List Article
+    { discussions : List Discussion
     , page : Int
     , totalPages : Int
     }
 
 
-updateArticle : Article -> Listing -> Listing
-updateArticle article listing =
+updateDiscussion : Discussion -> Listing -> Listing
+updateDiscussion discussion listing =
     let
-        articles : List Article
-        articles =
+        discussions : List Discussion
+        discussions =
             List.map
                 (\a ->
-                    if a.slug == article.slug then
-                        article
+                    if a.slug == discussion.slug then
+                        discussion
 
                     else
                         a
                 )
-                listing.articles
+                listing.discussions
     in
-    { listing | articles = articles }
+    { listing | discussions = discussions }
 
 
 

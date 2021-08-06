@@ -1,23 +1,23 @@
 module Gen.Msg exposing (Msg(..))
 
+import Gen.Params.Discussion.Slug_
 import Gen.Params.Editor
+import Gen.Params.Editor.DiscussionSlug_
 import Gen.Params.Home_
 import Gen.Params.Login
 import Gen.Params.NotFound
+import Gen.Params.Profile.Id_
 import Gen.Params.Register
 import Gen.Params.Settings
-import Gen.Params.Article.Slug_
-import Gen.Params.Editor.ArticleSlug_
-import Gen.Params.Profile.Id_
+import Pages.Discussion.Slug_
 import Pages.Editor
+import Pages.Editor.DiscussionSlug_
 import Pages.Home_
 import Pages.Login
 import Pages.NotFound
+import Pages.Profile.Id_
 import Pages.Register
 import Pages.Settings
-import Pages.Article.Slug_
-import Pages.Editor.ArticleSlug_
-import Pages.Profile.Id_
 
 
 type Msg
@@ -26,7 +26,6 @@ type Msg
     | Login Pages.Login.Msg
     | Register Pages.Register.Msg
     | Settings Pages.Settings.Msg
-    | Article__Slug_ Pages.Article.Slug_.Msg
-    | Editor__ArticleSlug_ Pages.Editor.ArticleSlug_.Msg
+    | Discussion__Slug_ Pages.Discussion.Slug_.Msg
+    | Editor__DiscussionSlug_ Pages.Editor.DiscussionSlug_.Msg
     | Profile__Id_ Pages.Profile.Id_.Msg
-
