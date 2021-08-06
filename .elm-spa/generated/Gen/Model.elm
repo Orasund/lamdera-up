@@ -8,7 +8,7 @@ import Gen.Params.Register
 import Gen.Params.Settings
 import Gen.Params.Article.Slug_
 import Gen.Params.Editor.ArticleSlug_
-import Gen.Params.Profile.Username_
+import Gen.Params.Profile.Id_
 import Pages.Editor
 import Pages.Home_
 import Pages.Login
@@ -17,7 +17,7 @@ import Pages.Register
 import Pages.Settings
 import Pages.Article.Slug_
 import Pages.Editor.ArticleSlug_
-import Pages.Profile.Username_
+import Pages.Profile.Id_
 
 
 type Model
@@ -30,5 +30,5 @@ type Model
     | Settings Gen.Params.Settings.Params Pages.Settings.Model
     | Article__Slug_ Gen.Params.Article.Slug_.Params Pages.Article.Slug_.Model
     | Editor__ArticleSlug_ Gen.Params.Editor.ArticleSlug_.Params Pages.Editor.ArticleSlug_.Model
-    | Profile__Username_ Gen.Params.Profile.Username_.Params Pages.Profile.Username_.Model
+    | Profile__Id_ Gen.Params.Profile.Id_.Params Pages.Profile.Id_.Model
 

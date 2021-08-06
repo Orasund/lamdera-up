@@ -1,4 +1,4 @@
-module Pages.Profile.Username_ exposing (Model, Msg(..), page)
+module Pages.Profile.Id_ exposing (Model, Msg(..), page)
 
 import Bridge exposing (..)
 import Config.View
@@ -9,9 +9,9 @@ import Data.Response exposing (Response)
 import Data.User exposing (User)
 import Element exposing (Element)
 import Element.Border as Border
-import Gen.Params.Profile.Username_ exposing (Params)
+import Gen.Params.Profile.Id_ exposing (Params)
 import Html exposing (..)
-import Html.Attributes exposing (class, classList, src)
+import Html.Attributes exposing (class, classList)
 import Html.Events as Events
 import Page
 import Request
@@ -19,7 +19,6 @@ import Shared
 import View exposing (View)
 import View.Color as Color
 import View.NotFound
-import Widget
 import Widget.Material as Material
 import Widget.Material.Typography as Typography
 
@@ -39,7 +38,7 @@ page shared req =
 
 
 type alias Model =
-    { username : String
+    { id : Int
     , profile : Response Profile
     , listing : Response Data.Article.Listing
     , selectedTab : Tab
@@ -54,37 +53,39 @@ type Tab
 
 init : Shared.Model -> Request.With Params -> ( Model, Cmd Msg )
 init shared { params } =
-    ( { username = params.username
+    let
+        id =
+            params.id |> String.toInt |> Maybe.withDefault -1
+    in
+    ( { id = id
       , profile = Data.Response.Loading
       , listing = Data.Response.Loading
       , selectedTab = MyArticles
       , page = 1
       }
     , Cmd.batch
-        [ ProfileGet_Profile__Username_
-            { username = params.username
-            }
+        [ ProfileGet_Profile__Id_ { id = id }
             |> sendToBackend
-        , fetchArticlesBy params.username 1
+        , fetchArticlesBy id 1
         ]
     )
 
 
-fetchArticlesBy : String -> Int -> Cmd Msg
-fetchArticlesBy username page_ =
+fetchArticlesBy : Int -> Int -> Cmd Msg
+fetchArticlesBy user_id page_ =
     ArticleList_Username_
         { page = page_
-        , filters = Filters.create |> Filters.withAuthor username
+        , filters = Filters.create |> Filters.withAuthor user_id
         }
         |> sendToBackend
 
 
-fetchArticlesFavoritedBy : String -> Int -> Cmd Msg
-fetchArticlesFavoritedBy username page_ =
+fetchArticlesFavoritedBy : Int -> Int -> Cmd Msg
+fetchArticlesFavoritedBy user_id page_ =
     ArticleList_Username_
         { page = page_
         , filters =
-            Filters.create |> Filters.favoritedBy username
+            Filters.create |> Filters.favoritedBy user_id
         }
         |> sendToBackend
 
@@ -115,16 +116,16 @@ update shared msg model =
 
         ClickedFollow user profile ->
             ( model
-            , ProfileFollow_Profile__Username_
-                { username = profile.username
+            , ProfileFollow_Profile__Id_
+                { id = profile.id
                 }
                 |> sendToBackend
             )
 
         ClickedUnfollow user profile ->
             ( model
-            , ProfileUnfollow_Profile__Username_
-                { username = profile.username
+            , ProfileUnfollow_Profile__Id_
+                { id = profile.id
                 }
                 |> sendToBackend
             )
@@ -140,7 +141,7 @@ update shared msg model =
                 , listing = Data.Response.Loading
                 , page = 1
               }
-            , fetchArticlesBy model.username 1
+            , fetchArticlesBy model.id 1
             )
 
         Clicked FavoritedArticles ->
@@ -149,12 +150,12 @@ update shared msg model =
                 , listing = Data.Response.Loading
                 , page = 1
               }
-            , fetchArticlesFavoritedBy model.username 1
+            , fetchArticlesFavoritedBy model.id 1
             )
 
         ClickedFavorite user article ->
             ( model
-            , ArticleFavorite_Profile__Username_
+            , ArticleFavorite_Profile__Id_
                 { slug = article.slug
                 }
                 |> sendToBackend
@@ -162,7 +163,7 @@ update shared msg model =
 
         ClickedUnfavorite user article ->
             ( model
-            , ArticleUnfavorite_Profile__Username_
+            , ArticleUnfavorite_Profile__Id_
                 { slug = article.slug
                 }
                 |> sendToBackend
@@ -170,7 +171,7 @@ update shared msg model =
 
         ClickedPage page_ ->
             let
-                fetch : String -> Int -> Cmd Msg
+                fetch : Int -> Int -> Cmd Msg
                 fetch =
                     case model.selectedTab of
                         MyArticles ->
@@ -184,7 +185,7 @@ update shared msg model =
                 , page = page_
               }
             , fetch
-                model.username
+                model.id
                 page_
             )
 
@@ -262,6 +263,17 @@ viewProfile shared profile model =
     [ Element.text profile.username |> Element.el Typography.h2
     , profile.bio |> Maybe.map Element.text |> Maybe.withDefault Element.none
     , Element.text <| "Points: " ++ String.fromInt profile.points
+    , if isViewingOwnProfile then
+        Element.text <|
+            "Tokens: "
+                ++ (shared.user
+                        |> Maybe.map .tokens
+                        |> Maybe.withDefault 0
+                        |> String.fromInt
+                   )
+
+      else
+        Element.none
     ]
         |> Element.column
             (Material.cardAttributes Color.palette

@@ -8,7 +8,7 @@ import Gen.Params.Register
 import Gen.Params.Settings
 import Gen.Params.Article.Slug_
 import Gen.Params.Editor.ArticleSlug_
-import Gen.Params.Profile.Username_
+import Gen.Params.Profile.Id_
 import Pages.Editor
 import Pages.Home_
 import Pages.Login
@@ -17,7 +17,7 @@ import Pages.Register
 import Pages.Settings
 import Pages.Article.Slug_
 import Pages.Editor.ArticleSlug_
-import Pages.Profile.Username_
+import Pages.Profile.Id_
 
 
 type Msg
@@ -28,5 +28,5 @@ type Msg
     | Settings Pages.Settings.Msg
     | Article__Slug_ Pages.Article.Slug_.Msg
     | Editor__ArticleSlug_ Pages.Editor.ArticleSlug_.Msg
-    | Profile__Username_ Pages.Profile.Username_.Msg
+    | Profile__Id_ Pages.Profile.Id_.Msg
 

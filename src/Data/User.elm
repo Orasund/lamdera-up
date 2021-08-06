@@ -7,7 +7,11 @@ module Data.User exposing (..)
 -}
 
 import Data.Article exposing (Slug)
+import Data.Game exposing (Game)
+import Data.Game.Player exposing (Player)
+import Data.Game.Pointer as Pointer exposing (Pointer)
 import Data.Profile exposing (Profile)
+import Dict
 
 
 type alias User =
@@ -15,8 +19,8 @@ type alias User =
     , email : Email
     , username : String
     , bio : Maybe String
-    , points : Int
     , tokens : Int
+    , points : Int
     }
 
 
@@ -28,8 +32,7 @@ type alias UserFull =
     , password : String
     , favorites : List Slug
     , following : List UserId
-    , points : Int
-    , tokens : Int
+    , player : Pointer Player
     }
 
 
@@ -37,23 +40,50 @@ type alias UserId =
     Int
 
 
-toUser : UserFull -> User
-toUser u =
+new : { id : Int, email : Email, username : String, password : String, player : Pointer Player } -> UserFull
+new args =
+    { id = args.id
+    , email = args.email
+    , username = args.username
+    , bio = Nothing
+    , password = args.password
+    , favorites = []
+    , following = []
+    , player = args.player
+    }
+
+
+toUser : Game -> UserFull -> User
+toUser game u =
+    let
+        player =
+            game.players
+                |> Pointer.get u.player
+    in
     { id = u.id
     , email = u.email
     , username = u.username
     , bio = u.bio
-    , points = u.points
-    , tokens = u.tokens
+    , tokens = player |> Maybe.map .tokens |> Maybe.withDefault 0
+    , points = player |> Maybe.map .points |> Maybe.withDefault 0
     }
 
 
-toProfile : UserFull -> Profile
-toProfile u =
-    { username = u.username
+toProfile : Game -> UserFull -> Profile
+toProfile game u =
+    let
+        player =
+            game.players
+                |> Pointer.get u.player
+    in
+    { id = u.id
+    , username = u.username
     , bio = u.bio
     , following = False
-    , points = u.points
+    , points =
+        player
+            |> Maybe.map .points
+            |> Maybe.withDefault 0
     }
 
 

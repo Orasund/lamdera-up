@@ -15,6 +15,7 @@ type alias Player =
 type PlayerId
     = Current
     | Relative Int
+    | Highest
 
 
 new : Player
@@ -50,3 +51,7 @@ getPointer args list =
                             |> Array.fromList
                             |> Array.get (index + int)
                     )
+
+        Highest ->
+            list
+                |> List.last

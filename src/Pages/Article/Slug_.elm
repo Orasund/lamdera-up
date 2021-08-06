@@ -148,18 +148,14 @@ update req msg model =
 
         ClickedFollow user profile ->
             ( model
-            , ProfileFollow_Article__Slug_
-                { username = profile.username
-                }
+            , ProfileFollow_Article__Slug_ { id = profile.id }
                 |> sendToBackend
                 |> Effect.fromCmd
             )
 
         ClickedUnfollow user profile ->
             ( model
-            , ProfileUnfollow_Article__Slug_
-                { username = profile.username
-                }
+            , ProfileUnfollow_Article__Slug_ { id = profile.id }
                 |> sendToBackend
                 |> Effect.fromCmd
             )
@@ -425,7 +421,7 @@ viewComment currentUser article comment =
     , [ Widget.textButton (Material.textButton Color.palette)
             { text = comment.author.username
             , onPress =
-                Route.Profile__Username_ { username = comment.author.username }
+                Route.Profile__Id_ { id = comment.author.id |> String.fromInt }
                     |> RequestedRouteChange
                     |> Just
             }

@@ -1,4 +1,4 @@
-module Data.Game exposing (Event(..), Game, triggerEvent, init)
+module Data.Game exposing (Event(..), Game, addPlayer, init, triggerEvent)
 
 import Array
 import Data.Game.Player as Player exposing (Player, PlayerId)
@@ -8,30 +8,47 @@ import List.Extra as List
 
 
 type alias Game =
-    { player : Dict Int Player
+    { players : Dict Int Player
     , rules : List Rule
+    , hasWon : Maybe (Pointer Player)
+    , nextPlayerId : Int
     }
 
 
 init : Game
 init =
-    { player = Dict.empty
+    { players = Dict.empty
     , rules =
-        [ { trigger = EveryWeek, commands = [ AddPoints 1 Player.Current ] }
+        [ { trigger = EveryDay, commands = [ AddPoints 1 Player.Current ] }
         , { trigger = TokenSpend 1, commands = [ AddPoints 1 Player.Current ] }
+        , { trigger = EveryWeek 4, commands = [ Win Player.Highest ] }
         ]
+    , hasWon = Nothing
+    , nextPlayerId = 0
     }
+
+
+addPlayer : Player -> Game -> ( Pointer Player, Game )
+addPlayer player game =
+    ( game.nextPlayerId |> Pointer.fromInt
+    , { game
+        | players = game.players |> Dict.insert game.nextPlayerId player
+        , nextPlayerId = game.nextPlayerId + 1
+      }
+    )
 
 
 type Trigger
     = TokenSpend Int
-    | EveryWeek
+    | EveryWeek Int
+    | EveryDay
 
 
 type Command
     = AddPoints Int PlayerId
     | AddTokens Int PlayerId
     | SwapPointsWith PlayerId PlayerId
+    | Win PlayerId
 
 
 type alias Rule =
@@ -42,7 +59,7 @@ type alias Rule =
 
 type Event
     = RuleBought { amount : Int, current : Pointer Player, rule : Pointer Rule }
-    | WeekPassed
+    | DayPassed Int
 
 
 triggerEvent : Event -> Game -> Game
@@ -87,14 +104,22 @@ filterRule event =
                     )
                 >> Maybe.withDefault []
 
-        WeekPassed ->
+        DayPassed n ->
             List.filterMap
                 (\rule ->
-                    if rule.trigger == EveryWeek then
-                        Just rule
+                    case rule.trigger of
+                        EveryWeek k ->
+                            if n |> modBy (7 * k) |> (==) 0 then
+                                Just rule
 
-                    else
-                        Nothing
+                            else
+                                Nothing
+
+                        EveryDay ->
+                            Just rule
+
+                        _ ->
+                            Nothing
                 )
 
 
@@ -104,8 +129,8 @@ getCurrent trigger game =
         RuleBought { current } ->
             current |> List.singleton
 
-        WeekPassed ->
-            game.player
+        DayPassed _ ->
+            game.players
                 |> Player.idsOrderedByPoints
 
 
@@ -113,77 +138,84 @@ applyCommand : { command : Command, current : Pointer Player } -> Game -> Game
 applyCommand args game =
     let
         playerIdsOrderedByPoints =
-            Player.idsOrderedByPoints game.player
+            Player.idsOrderedByPoints game.players
 
         getPlayerId playerId =
             playerIdsOrderedByPoints
                 |> Player.getPointer { playerId = playerId, current = args.current }
     in
-    case args.command of
-        AddPoints amount playerId ->
-            getPlayerId playerId
-                |> Maybe.map
-                    (\pointer ->
-                        mapPlayer
-                            (\player ->
-                                { player | points = player.points + amount }
-                            )
-                            pointer
-                            game
+    if game.hasWon /= Nothing then
+        game
+
+    else
+        case args.command of
+            AddPoints amount playerId ->
+                getPlayerId playerId
+                    |> Maybe.map
+                        (\pointer ->
+                            mapPlayer
+                                (\player ->
+                                    { player | points = player.points + amount }
+                                )
+                                pointer
+                                game
+                        )
+                    |> Maybe.withDefault game
+
+            AddTokens amount playerId ->
+                getPlayerId playerId
+                    |> Maybe.map
+                        (\pointer ->
+                            mapPlayer
+                                (\player ->
+                                    { player | tokens = player.points + amount }
+                                )
+                                pointer
+                                game
+                        )
+                    |> Maybe.withDefault game
+
+            SwapPointsWith pId1 pId2 ->
+                let
+                    pointer1 =
+                        getPlayerId pId1
+
+                    pointer2 =
+                        getPlayerId pId2
+
+                    player1 =
+                        pointer1
+                            |> Maybe.andThen (\p -> game.players |> Pointer.get p)
+
+                    player2 =
+                        pointer2
+                            |> Maybe.andThen (\p -> game.players |> Pointer.get p)
+
+                    updateFun player =
+                        Maybe.map (\p -> { p | points = player.points })
+                in
+                Maybe.map4
+                    (\p1 p2 key1 key2 ->
+                        { game
+                            | players =
+                                game.players
+                                    |> Pointer.update key1 (updateFun p2)
+                                    |> Pointer.update key2 (updateFun p1)
+                        }
                     )
-                |> Maybe.withDefault game
-
-        AddTokens amount playerId ->
-            getPlayerId playerId
-                |> Maybe.map
-                    (\pointer ->
-                        mapPlayer
-                            (\player ->
-                                { player | tokens = player.points + amount }
-                            )
-                            pointer
-                            game
-                    )
-                |> Maybe.withDefault game
-
-        SwapPointsWith pId1 pId2 ->
-            let
-                pointer1 =
-                    getPlayerId pId1
-
-                pointer2 =
-                    getPlayerId pId2
-
-                player1 =
+                    player1
+                    player2
                     pointer1
-                        |> Maybe.andThen (\p -> game.player |> Pointer.get p)
-
-                player2 =
                     pointer2
-                        |> Maybe.andThen (\p -> game.player |> Pointer.get p)
+                    |> Maybe.withDefault game
 
-                updateFun player =
-                    Maybe.map (\p -> { p | points = player.points })
-            in
-            Maybe.map4
-                (\p1 p2 key1 key2 ->
-                    { game
-                        | player =
-                            game.player
-                                |> Pointer.update key1 (updateFun p2)
-                                |> Pointer.update key2 (updateFun p1)
-                    }
-                )
-                player1
-                player2
-                pointer1
-                pointer2
-                |> Maybe.withDefault game
+            Win playerId ->
+                { game | hasWon = getPlayerId playerId }
 
 
 mapPlayer : (Player -> Player) -> Pointer Player -> Game -> Game
 mapPlayer fun pointer game =
     { game
-        | player =
-            game.player |> Pointer.update pointer (Maybe.map fun)
+        | players =
+            game.players |> Pointer.update pointer (Maybe.map fun)
     }

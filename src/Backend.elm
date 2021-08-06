@@ -4,9 +4,10 @@ import Bridge exposing (..)
 import Data.Article exposing (Article, ArticleStore, Slug)
 import Data.Article.Filters as Filters exposing (Filters(..))
 import Data.Game as Game
+import Data.Game.Player as Player
 import Data.Profile exposing (Profile)
 import Data.Response exposing (Response(..))
-import Data.User exposing (Email, UserFull)
+import Data.User as User exposing (Email, UserFull)
 import Dict
 import Dict.Extra as Dict
 import Gen.Msg
@@ -17,7 +18,7 @@ import Pages.Editor
 import Pages.Editor.ArticleSlug_
 import Pages.Home_
 import Pages.Login
-import Pages.Profile.Username_
+import Pages.Profile.Id_
 import Pages.Register
 import Pages.Settings
 import Task
@@ -46,6 +47,7 @@ init =
       , articles = Dict.empty
       , comments = Dict.empty
       , game = Game.init
+      , daysPassed = 0
       }
     , Cmd.none
     )
@@ -57,11 +59,20 @@ update msg model =
         CheckSession sid cid ->
             model
                 |> getSessionUser sid
-                |> Maybe.map (\user -> ( model, sendToFrontend cid (ActiveSession (Data.User.toUser user)) ))
+                |> Maybe.map
+                    (\user ->
+                        ( model
+                        , sendToFrontend cid (ActiveSession (User.toUser model.game user))
+                        )
+                    )
                 |> Maybe.withDefault ( model, Cmd.none )
 
         RenewSession uid sid cid now ->
-            ( { model | sessions = model.sessions |> Dict.update sid (always (Just { userId = uid, expires = now |> Time.add Time.Day 30 Time.utc })) }
+            ( { model
+                | sessions =
+                    model.sessions
+                        |> Dict.update sid (always (Just { userId = uid, expires = now |> Time.add Time.Day 30 Time.utc }))
+              }
             , Time.now |> Task.perform (always (CheckSession sid cid))
             )
 
@@ -101,7 +112,7 @@ update msg model =
                             , createdAt = t
                             , updatedAt = t
                             , body = commentBody.body
-                            , author = Data.User.toProfile user
+                            , author = User.toProfile model.game user
                             }
 
                         newComments =
@@ -128,11 +139,12 @@ update msg model =
         NoOpBackendMsg ->
             ( model, Cmd.none )
 
-        WeekPassed ->
+        DayPassed ->
             ( { model
                 | game =
                     model.game
-                        |> Game.triggerEvent Game.WeekPassed
+                        |> Game.triggerEvent (Game.DayPassed (model.daysPassed + 1))
+                , daysPassed = model.daysPassed + 1
               }
             , Cmd.none
             )
@@ -225,7 +237,7 @@ updateFromFrontend sessionId clientId msg model =
                 articleList =
                     getListing model sessionId filters page
             in
-            send (PageMsg (Gen.Msg.Profile__Username_ (Pages.Profile.Username_.GotArticles (Success articleList))))
+            send (PageMsg (Gen.Msg.Profile__Id_ (Pages.Profile.Id_.GotArticles (Success articleList))))
 
         ArticleGet_Editor__ArticleSlug_ { slug } ->
             onlyWhenArticleOwner slug
@@ -271,17 +283,17 @@ updateFromFrontend sessionId clientId msg model =
                     )
                 )
 
-        ArticleFavorite_Profile__Username_ { slug } ->
+        ArticleFavorite_Profile__Id_ { slug } ->
             favoriteArticle sessionId
                 slug
                 model
-                (\r -> send_ (PageMsg (Gen.Msg.Profile__Username_ (Pages.Profile.Username_.UpdatedArticle r))))
+                (\r -> send_ (PageMsg (Gen.Msg.Profile__Id_ (Pages.Profile.Id_.UpdatedArticle r))))
 
-        ArticleUnfavorite_Profile__Username_ { slug } ->
+        ArticleUnfavorite_Profile__Id_ { slug } ->
             unfavoriteArticle sessionId
                 slug
                 model
-                (\r -> send_ (PageMsg (Gen.Msg.Profile__Username_ (Pages.Profile.Username_.UpdatedArticle r))))
+                (\r -> send_ (PageMsg (Gen.Msg.Profile__Id_ (Pages.Profile.Id_.UpdatedArticle r))))
 
         ArticleFavorite_Home_ { slug } ->
             favoriteArticle sessionId
@@ -337,36 +349,36 @@ updateFromFrontend sessionId clientId msg model =
             , send_ (PageMsg (Gen.Msg.Article__Slug_ (Pages.Article.Slug_.DeletedComment (Success commentId))))
             )
 
-        ProfileGet_Profile__Username_ { username } ->
+        ProfileGet_Profile__Id_ { id } ->
             let
                 res =
-                    profileByUsername username model
+                    profileById id model
                         |> Maybe.map Success
                         |> Maybe.withDefault (Failure [ "user not found" ])
             in
-            send (PageMsg (Gen.Msg.Profile__Username_ (Pages.Profile.Username_.GotProfile res)))
+            send (PageMsg (Gen.Msg.Profile__Id_ (Pages.Profile.Id_.GotProfile res)))
 
-        ProfileFollow_Profile__Username_ { username } ->
+        ProfileFollow_Profile__Id_ { id } ->
             followUser sessionId
-                username
+                id
                 model
-                (\r -> send_ (PageMsg (Gen.Msg.Profile__Username_ (Pages.Profile.Username_.GotProfile r))))
+                (\r -> send_ (PageMsg (Gen.Msg.Profile__Id_ (Pages.Profile.Id_.GotProfile r))))
 
-        ProfileUnfollow_Profile__Username_ { username } ->
+        ProfileUnfollow_Profile__Id_ { id } ->
             unfollowUser sessionId
-                username
+                id
                 model
-                (\r -> send_ (PageMsg (Gen.Msg.Profile__Username_ (Pages.Profile.Username_.GotProfile r))))
+                (\r -> send_ (PageMsg (Gen.Msg.Profile__Id_ (Pages.Profile.Id_.GotProfile r))))
 
-        ProfileFollow_Article__Slug_ { username } ->
+        ProfileFollow_Article__Slug_ { id } ->
             followUser sessionId
-                username
+                id
                 model
                 (\r -> send_ (PageMsg (Gen.Msg.Article__Slug_ (Pages.Article.Slug_.GotAuthor r))))
 
-        ProfileUnfollow_Article__Slug_ { username } ->
+        ProfileUnfollow_Article__Slug_ { id } ->
             unfollowUser sessionId
-                username
+                id
                 model
                 (\r -> send_ (PageMsg (Gen.Msg.Article__Slug_ (Pages.Article.Slug_.GotAuthor r))))
 
@@ -378,7 +390,9 @@ updateFromFrontend sessionId clientId msg model =
                         |> Maybe.map
                             (\( k, u ) ->
                                 if u.password == params.password then
-                                    ( Success (Data.User.toUser u), renewSession u.id sessionId clientId )
+                                    ( Success (User.toUser model.game u)
+                                    , renewSession u.id sessionId clientId
+                                    )
 
                                 else
                                     ( Failure [ "email or password is invalid" ], Cmd.none )
@@ -395,21 +409,25 @@ updateFromFrontend sessionId clientId msg model =
 
                     else
                         let
+                            ( player, game ) =
+                                model.game
+                                    |> Game.addPlayer Player.new
+
                             user_ =
-                                { id = Dict.size model.users
-                                , email = params.email
-                                , username = params.username
-                                , bio = Nothing
-                                , points = 0
-                                , password = params.password
-                                , favorites = []
-                                , following = []
-                                , tokens = 0
-                                }
+                                User.new
+                                    { id = Dict.size model.users
+                                    , email = params.email
+                                    , username = params.username
+                                    , password = params.password
+                                    , player = player
+                                    }
                         in
-                        ( { model | users = model.users |> Dict.insert user_.id user_ }
+                        ( { model
+                            | users = model.users |> Dict.insert user_.id user_
+                            , game = game
+                          }
                         , renewSession user_.id sessionId clientId
-                        , Success (Data.User.toUser user_)
+                        , Success (User.toUser model.game user_)
                         )
             in
             ( model_, Cmd.batch [ cmd, send_ (PageMsg (Gen.Msg.Register (Pages.Register.GotUser res))) ] )
@@ -434,7 +452,7 @@ updateFromFrontend sessionId clientId msg model =
                                             , bio = Just params.bio
                                         }
                                 in
-                                ( model |> updateUser user_, Success (Data.User.toUser user_) )
+                                ( model |> updateUser user_, Success (User.toUser model.game user_) )
 
                             else
                                 ( model, Failure [ "Old password is incorrect" ] )
@@ -548,17 +566,17 @@ unfavoriteArticle sessionId slug model toResponseCmd =
             ( model, toResponseCmd <| Failure [ "invalid session" ] )
 
 
-followUser : SessionId -> Email -> Model -> (Response Profile -> Cmd msg) -> ( Model, Cmd msg )
-followUser sessionId email model toResponseCmd =
+followUser : SessionId -> Int -> Model -> (Response Profile -> Cmd msg) -> ( Model, Cmd msg )
+followUser sessionId id model toResponseCmd =
     let
         res =
-            profileByEmail email model
+            profileById id model
                 |> Maybe.map (\a -> Success { a | following = True })
                 |> Maybe.withDefault (Failure [ "invalid user" ])
     in
     case model |> getSessionUser sessionId of
         Just user ->
-            ( case model.users |> Dict.find (\l u -> u.email == email) of
+            ( case model.users |> Dict.find (\l u -> u.id == id) of
                 Just ( _, follow ) ->
                     model |> updateUser { user | following = (follow.id :: user.following) |> List.unique }
 
@@ -571,19 +589,23 @@ followUser sessionId email model toResponseCmd =
             ( model, toResponseCmd <| Failure [ "invalid session" ] )
 
 
-unfollowUser : SessionId -> Email -> Model -> (Response Profile -> Cmd msg) -> ( Model, Cmd msg )
-unfollowUser sessionId email model toResponseCmd =
-    case model.users |> Dict.find (\k u -> u.email == email) of
+unfollowUser : SessionId -> Int -> Model -> (Response Profile -> Cmd msg) -> ( Model, Cmd msg )
+unfollowUser sessionId id model toResponseCmd =
+    case model.users |> Dict.find (\k u -> u.id == id) of
         Just ( _, followed ) ->
             let
                 res =
                     followed
-                        |> Data.User.toProfile
+                        |> User.toProfile model.game
                         |> (\a -> Success { a | following = False })
             in
             case model |> getSessionUser sessionId of
                 Just user ->
-                    ( model |> updateUser { user | following = user.following |> List.remove followed.id }
+                    ( model
+                        |> updateUser
+                            { user
+                                | following = user.following |> List.remove followed.id
+                            }
                     , toResponseCmd res
                     )
 
@@ -599,12 +621,16 @@ updateUser user model =
     { model | users = model.users |> Dict.update user.id (Maybe.map (always user)) }
 
 
-profileByUsername username model =
-    model.users |> Dict.find (\k u -> u.username == username) |> Maybe.map (Tuple.second >> Data.User.toProfile)
+profileById id model =
+    model.users
+        |> Dict.find (\k u -> u.id == id)
+        |> Maybe.map (Tuple.second >> User.toProfile model.game)
 
 
 profileByEmail email model =
-    model.users |> Dict.find (\k u -> u.email == email) |> Maybe.map (Tuple.second >> Data.User.toProfile)
+    model.users
+        |> Dict.find (\k u -> u.email == email)
+        |> Maybe.map (Tuple.second >> User.toProfile model.game)
 
 
 loadArticleFromStore : Model -> Maybe UserFull -> ArticleStore -> Article
@@ -616,9 +642,10 @@ loadArticleFromStore model userM store =
         author =
             model.users
                 |> Dict.get store.userId
-                |> Maybe.map Data.User.toProfile
+                |> Maybe.map (User.toProfile model.game)
                 |> Maybe.withDefault
-                    { username = "error: unknown user"
+                    { id = -1
+                    , username = "error: unknown user"
                     , bio = Nothing
                     , following = False
                     , points = 0
@@ -654,5 +681,5 @@ subscriptions m =
     in
     Sub.batch
         [ onConnect CheckSession
-        , Time.every (7 * day) (always <| WeekPassed)
+        , Time.every day (always <| DayPassed)
         ]

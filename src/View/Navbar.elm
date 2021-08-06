@@ -30,7 +30,7 @@ view options =
             case options.user of
                 Just user ->
                     [ ( "New Article", Route.Editor )
-                    , ( "Profil", Route.Profile__Username_ { username = user.username } )
+                    , ( "Profil", Route.Profile__Id_ { id = user.id |> String.fromInt } )
                     ]
 
                 Nothing ->

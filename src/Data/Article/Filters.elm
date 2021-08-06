@@ -14,8 +14,8 @@ import Dict.Extra as Dict
 type Filters
     = Filters
         { tag : Maybe String
-        , author : Maybe String
-        , favorited : Maybe String
+        , author : Maybe Int
+        , favorited : Maybe Int
         }
 
 
@@ -33,14 +33,14 @@ withTag tag (Filters filters) =
     Filters { filters | tag = Just tag }
 
 
-withAuthor : String -> Filters -> Filters
-withAuthor username (Filters filters) =
-    Filters { filters | author = Just username }
+withAuthor : Int -> Filters -> Filters
+withAuthor user_id (Filters filters) =
+    Filters { filters | author = Just user_id }
 
 
-favoritedBy : String -> Filters -> Filters
-favoritedBy username (Filters filters) =
-    Filters { filters | favorited = Just username }
+favoritedBy : Int -> Filters -> Filters
+favoritedBy user_id (Filters filters) =
+    Filters { filters | favorited = Just user_id }
 
 
 byTag mTag articles =
@@ -54,8 +54,8 @@ byTag mTag articles =
 
 byAuthor mAuthor users articles =
     case mAuthor of
-        Just username ->
-            case users |> Dict.find (\_ u -> u.username == username) |> Maybe.map Tuple.second of
+        Just id ->
+            case users |> Dict.find (\_ u -> u.id == id) |> Maybe.map Tuple.second of
                 Just user ->
                     articles |> Dict.filter (\_ a -> a.userId == user.id)
 
@@ -66,10 +66,10 @@ byAuthor mAuthor users articles =
             articles
 
 
-byFavorite mUsername users articles =
-    case mUsername of
-        Just username ->
-            case users |> Dict.find (\_ u -> u.username == username) |> Maybe.map Tuple.second of
+byFavorite mId users articles =
+    case mId of
+        Just id ->
+            case users |> Dict.find (\_ u -> u.id == id) |> Maybe.map Tuple.second of
                 Just user ->
                     articles |> Dict.filter (\slug _ -> List.member slug user.favorites)
 

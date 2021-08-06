@@ -8,7 +8,8 @@ module Data.Profile exposing (Profile)
 
 
 type alias Profile =
-    { username : String
+    { id : Int
+    , username : String
     , bio : Maybe String
     , following : Bool
     , points : Int
