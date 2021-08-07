@@ -31,41 +31,44 @@ view options =
                     []
 
                 Data.Response.Success listing ->
-                    let
-                        viewPage : Int -> Html msg
-                        viewPage page =
-                            li
-                                [ class "page-item"
-                                , classList [ ( "active", listing.page == page ) ]
-                                ]
-                                [ button
-                                    [ class "page-link"
-                                    , Events.onClick (options.onPageClick page)
-                                    ]
-                                    [ text (String.fromInt page) ]
-                                ]
-                    in
                     List.concat
-                        [ listing.discussions
-                            |> List.map (viewDiscussionPreview options.onClick)
-                        , [ List.range 1 listing.totalPages
-                                |> List.map viewPage
-                                |> ul [ class "pagination" ]
-                                |> Element.html
-                                |> Element.el [ Element.padding Config.View.padding ]
+                        [ [ Widget.select
+                                { selected = Just <| listing.page
+                                , options =
+                                    List.range 1 listing.totalPages
+                                        |> List.map
+                                            (\int ->
+                                                { text = String.fromInt int
+                                                , icon = always Element.none
+                                                }
+                                            )
+                                , onSelect = \i -> Just <| options.onPageClick i
+                                }
+                                |> Widget.buttonRow
+                                    { elementRow = Material.buttonRow
+                                    , content = Material.toggleButton Material.defaultPalette
+                                    }
+                                |> Element.el
+                                    [ Element.paddingXY Config.View.padding Config.View.spacing
+                                    , Element.centerX
+                                    ]
                                 |> Widget.asItem
                           ]
+                        , listing.discussions
+                            |> List.map (viewDiscussionPreview options.onClick)
                         ]
 
                 _ ->
                     []
     in
-    Widget.fullBleedItem (Material.fullBleedItem Color.palette)
+    [ Widget.fullBleedItem (Material.fullBleedItem Color.palette)
         { text = "New Discussion"
         , icon = always Element.none
         , onPress = Just options.onNewDiscussion
         }
-        :: list
+    , Widget.divider (Material.fullBleedDivider Color.palette)
+    ]
+        ++ list
         |> Widget.itemList (Material.sideSheet Color.palette)
 
 

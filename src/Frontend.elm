@@ -19,6 +19,7 @@ import Types exposing (FrontendModel, FrontendMsg(..), ToFrontend(..))
 import Url exposing (Url)
 import View
 import View.Color as Color
+import Widget.Material.Typography as Typography
 
 
 type alias Model =
@@ -161,12 +162,14 @@ view model =
                 , body =
                     document.body
                         |> Element.layout
-                            [ Color.palette.secondary
+                            ([ Color.palette.secondary
                                 |> Color.toRgba
                                 |> Element.fromRgb
                                 |> Background.color
-                            , Element.height Element.fill
-                            ]
+                             , Element.height Element.fill
+                             ]
+                                ++ Typography.body1
+                            )
                         |> List.singleton
                 }
            )

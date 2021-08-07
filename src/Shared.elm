@@ -89,15 +89,14 @@ view req { page, toMsg } model =
         else
             page.title ++ " | Conduit"
     , body =
-        css
-            ++ [ View.Navbar.view
-                    { user = model.user
-                    , currentRoute = Utils.Route.fromUrl req.url
-                    , onSignOut = toMsg ClickedSignOut
-                    , msgMapper = RequestedRouteChange >> toMsg
-                    }
-               , page.body
-               ]
+        [ View.Navbar.view
+            { user = model.user
+            , currentRoute = Utils.Route.fromUrl req.url
+            , onSignOut = toMsg ClickedSignOut
+            , msgMapper = RequestedRouteChange >> toMsg
+            }
+        , page.body
+        ]
             |> Element.column
                 [ Element.width <| Element.fill
                 , Element.height <| Element.fill

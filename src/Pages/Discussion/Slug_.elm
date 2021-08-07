@@ -10,10 +10,11 @@ import Data.Response exposing (Response)
 import Data.User exposing (User)
 import Effect exposing (Effect)
 import Element exposing (Element)
+import Element.Border as Border
 import Gen.Params.Discussion.Slug_ exposing (Params)
 import Gen.Route as Route exposing (Route)
 import Html exposing (..)
-import Html.Attributes exposing (class, href)
+import Html.Attributes exposing (class)
 import Markdown
 import Page
 import Request
@@ -23,10 +24,10 @@ import Utils.Time
 import View exposing (View)
 import View.Color as Color
 import View.DiscussionList
-import View.IconButton as IconButton
 import View.Input
 import Widget
 import Widget.Material as Material
+import Widget.Material.Typography as Typography
 
 
 page : Shared.Model -> Request.With Params -> Page.With Model Msg
@@ -267,7 +268,7 @@ update req msg model =
         RequestedRouteChange route ->
             ( model, Shared.RequestedRouteChange route |> Effect.fromShared )
 
-        LoadDiscussion slug ->
+        LoadDiscussion _ ->
             ( model, Effect.none )
 
 
@@ -305,42 +306,29 @@ viewDiscussion shared model discussion =
         , onClick = LoadDiscussion
         , onNewDiscussion = Route.Editor |> RequestedRouteChange
         }
-    , [ div [ class "container" ]
-            [ h1 [] [ text discussion.title ]
-            , viewDiscussionMeta shared discussion
-            ]
-            |> Element.html
-            |> Element.el
+    , [ [ Element.text discussion.title |> Element.el Typography.h2
+        , viewDiscussionMeta shared discussion
+        ]
+            |> Element.column
                 [ Element.width <| Element.fill
-                , Element.htmlAttribute <| class "banner"
+                , Element.spacing Config.View.spacing
                 ]
       , [ div [ class "row discussion-content" ]
             [ div [ class "col-md-12" ]
                 [ Markdown.toHtml [] discussion.body ]
-            , if List.isEmpty discussion.tags then
-                text ""
-
-              else
-                ul [ class "tag-list" ]
-                    (List.map
-                        (\tag -> li [ class "tag-default tag-pill tag-outline" ] [ text tag ])
-                        discussion.tags
-                    )
             ]
-            |> Element.html
-        , hr [] [] |> Element.html
-        , div [ class "discussion-actions" ] [ viewDiscussionMeta shared discussion ]
             |> Element.html
         , viewCommentSection shared model discussion
         ]
             |> Element.column
-                [ class "container page" |> Element.htmlAttribute
-                , Element.width <| Element.fill
-                ]
+                [ Element.width Element.fill ]
       ]
         |> Element.column
-            [ Element.width <| Element.fill
-            , class "discussion-page" |> Element.htmlAttribute
+            [ Element.width <| Element.maximum Config.View.maxWidth <| Element.fill
+            , Element.centerX
+            , Element.padding Config.View.padding
+            , Element.spacing (2 * Config.View.spacing)
+            , Element.alignTop
             ]
     ]
         |> Element.row
@@ -349,74 +337,59 @@ viewDiscussion shared model discussion =
             ]
 
 
-viewDiscussionMeta : Shared.Model -> Discussion -> Html Msg
+viewDiscussionMeta : Shared.Model -> Discussion -> Element Msg
 viewDiscussionMeta shared discussion =
-    div [ class "discussion-meta" ] <|
-        List.concat
-            [ [ div [ class "info" ]
-                    [ a [ class "author", href ("/profile/" ++ discussion.author.username) ] [ text discussion.author.username ]
-                    , span [ class "date" ] [ text (Utils.Time.formatDate discussion.createdAt) ]
-                    ]
-              ]
-            , case shared.user of
-                Just user ->
-                    viewControls discussion user
-
-                Nothing ->
-                    []
-            ]
-
-
-viewControls : Discussion -> User -> List (Html Msg)
-viewControls discussion user =
-    if discussion.author.username == user.username then
-        [ a
-            [ class "btn btn-outline-secondary btn-sm"
-            , href ("/editor/" ++ discussion.slug)
-            ]
-            [ i [ class "ion-edit" ] []
-            , text "Edit discussion"
-            ]
-        , IconButton.view
-            { color = IconButton.OutlinedRed
-            , icon = IconButton.Trash
-            , label = "Delete discussion"
-            , onClick = ClickedDeleteDiscussion user discussion
+    [ [ [ Element.text "By"
+        , Widget.textButton (Material.textButton Color.palette)
+            { text = discussion.author.username
+            , onPress =
+                Route.Profile__Id_ { id = discussion.author.id |> String.fromInt }
+                    |> RequestedRouteChange
+                    |> Just
             }
         ]
+            |> Element.row []
+      , Element.text (Utils.Time.formatDate discussion.createdAt)
+      ]
+        |> Element.row
+            [ Element.width Element.fill
+            , Element.spaceEvenly
+            ]
+    , case shared.user of
+        Just user ->
+            viewControls discussion user
+
+        Nothing ->
+            Element.none
+    ]
+        |> Element.column
+            [ Element.width Element.fill
+            , Element.spacing Config.View.spacing
+            ]
+
+
+viewControls : Discussion -> User -> Element Msg
+viewControls discussion user =
+    if discussion.author.username == user.username then
+        [ Widget.textButton (Material.textButton Color.palette)
+            { text = "Delete"
+            , onPress = ClickedDeleteDiscussion user discussion |> Just
+            }
+        , Widget.textButton (Material.containedButton Color.palette)
+            { text = "Edit"
+            , onPress =
+                Route.Editor__DiscussionSlug_ { discussionSlug = discussion.slug }
+                    |> RequestedRouteChange
+                    |> Just
+            }
+        ]
+            |> Element.row
+                [ Element.alignRight
+                , Element.spacing Config.View.spacing
+                ]
 
     else
-        [ if discussion.author.following then
-            IconButton.view
-                { color = IconButton.FilledGray
-                , icon = IconButton.Plus
-                , label = "Unfollow " ++ discussion.author.username
-                , onClick = ClickedUnfollow user discussion.author
-                }
-
-          else
-            IconButton.view
-                { color = IconButton.OutlinedGray
-                , icon = IconButton.Plus
-                , label = "Follow " ++ discussion.author.username
-                , onClick = ClickedFollow user discussion.author
-                }
-        , if discussion.favorited then
-            IconButton.view
-                { color = IconButton.FilledGreen
-                , icon = IconButton.Heart
-                , label = "Unfavorite Post (" ++ String.fromInt discussion.favoritesCount ++ ")"
-                , onClick = ClickedUnfavorite user discussion
-                }
-
-          else
-            IconButton.view
-                { color = IconButton.OutlinedGreen
-                , icon = IconButton.Heart
-                , label = "Favorite Post (" ++ String.fromInt discussion.favoritesCount ++ ")"
-                , onClick = ClickedFavorite user discussion
-                }
-        ]
+        Element.none
 
 
 viewCommentSection : Shared.Model -> Model -> Discussion -> Element Msg
@@ -439,7 +412,10 @@ viewCommentSection shared model discussion =
         Nothing ->
             Element.none
     ]
-        |> Element.column [ Element.width Element.fill ]
+        |> Element.column
+            [ Element.width Element.fill
+            , Element.spacing Config.View.spacing
+            ]
 
 
 viewCommentForm : Model -> User -> Discussion -> Element Msg
@@ -484,25 +460,26 @@ viewComment currentUser discussion comment =
                 Nothing ->
                     Element.none
     in
-    [ Element.text comment.body
-    , [ Widget.textButton (Material.textButton Color.palette)
+    [ [ Widget.textButton (Material.textButton Color.palette)
             { text = comment.author.username
             , onPress =
                 Route.Profile__Id_ { id = comment.author.id |> String.fromInt }
                     |> RequestedRouteChange
                     |> Just
             }
-      , span [ class "date-posted" ] [ text (Utils.Time.formatDate comment.createdAt) ]
-            |> Element.html
       , viewCommentActions
       ]
-        |> Element.row []
+        |> Element.row [ Element.spaceEvenly, Element.width Element.fill ]
+    , Element.text comment.body |> Element.el [ Element.padding Config.View.spacing ]
+    , Element.text (Utils.Time.formatDate comment.createdAt)
+        |> Element.el [ Element.alignRight ]
     ]
         |> Element.column
             (Material.cardAttributes Color.palette
                 ++ [ Element.fill
                         |> Element.maximum Config.View.maxWidth
                         |> Element.width
+                   , Border.rounded Config.View.rounded
                    , Element.centerX
                    ]
             )
