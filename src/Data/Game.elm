@@ -1,4 +1,13 @@
-module Data.Game exposing (Event(..), Game, addPlayer, init, triggerEvent)
+module Data.Game exposing
+    ( Event(..)
+    , Game
+    , Rule
+    , Trigger(..)
+    , addPlayer
+    , init
+    , spendToken
+    , triggerEvent
+    )
 
 import Array
 import Data.Game.Player as Player exposing (Player, PlayerId)
@@ -15,13 +24,51 @@ type alias Game =
     }
 
 
+type Trigger
+    = TokenSpend Int
+    | EveryWeek Int
+    | EveryDay
+
+
+type Command
+    = AddPoints Int PlayerId
+    | AddTokens Int PlayerId
+    | SwapPointsWith PlayerId PlayerId
+    | Win PlayerId
+
+
+type alias Rule =
+    { id : Int
+    , description : String
+    , trigger : Trigger
+    , commands : List Command
+    }
+
+
+type Event
+    = RuleBought { current : Pointer Player, rule : Pointer Rule }
+    | DayPassed Int
+
+
 init : Game
 init =
     { players = Dict.empty
     , rules =
-        [ { trigger = EveryDay, commands = [ AddPoints 1 Player.Current ] }
-        , { trigger = TokenSpend 1, commands = [ AddPoints 1 Player.Current ] }
-        , { trigger = EveryWeek 4, commands = [ Win Player.Highest ] }
+        [ { id = 1
+          , trigger = EveryDay
+          , description = "You get a token"
+          , commands = [ AddTokens 1 Player.Current ]
+          }
+        , { id = 2
+          , trigger = TokenSpend 1
+          , description = "You get a point"
+          , commands = [ AddPoints 1 Player.Current ]
+          }
+        , { id = 3
+          , trigger = EveryWeek 4
+          , description = "The player with the highest points wins"
+          , commands = [ Win Player.Highest ]
+          }
         ]
     , hasWon = Nothing
     , nextPlayerId = 0
@@ -38,28 +85,41 @@ addPlayer player game =
     )
 
 
-type Trigger
-    = TokenSpend Int
-    | EveryWeek Int
-    | EveryDay
+spendToken : { rule : Pointer Rule, current : Pointer Player } -> Game -> Game
+spendToken args game =
+    case game.rules |> Pointer.find .id args.rule |> Maybe.map .trigger of
+        Just (TokenSpend amount) ->
+            (game.players |> Pointer.get args.current)
+                |> Maybe.andThen
+                    (\player ->
+                        let
+                            tokens =
+                                player.tokens - amount
+                        in
+                        if tokens >= 0 then
+                            Just { player | tokens = tokens }
 
+                        else
+                            Nothing
+                    )
+                |> Maybe.map
+                    (\player ->
+                        { game
+                            | players =
+                                game.players
+                                    |> Pointer.update args.current (Maybe.map (always player))
+                        }
+                            |> triggerEvent
+                                (RuleBought
+                                    { current = args.current
+                                    , rule = args.rule
+                                    }
+                                )
+                    )
+                |> Maybe.withDefault game
 
-type Command
-    = AddPoints Int PlayerId
-    | AddTokens Int PlayerId
-    | SwapPointsWith PlayerId PlayerId
-    | Win PlayerId
-
-
-type alias Rule =
-    { trigger : Trigger
-    , commands : List Command
-    }
-
-
-type Event
-    = RuleBought { amount : Int, current : Pointer Player, rule : Pointer Rule }
-    | DayPassed Int
+        _ ->
+            game
 
 
 triggerEvent : Event -> Game -> Game
@@ -91,16 +151,16 @@ triggerEvent event g1 =
 filterRule : Event -> List Rule -> List Rule
 filterRule event =
     case event of
-        RuleBought { amount, rule } ->
-            Array.fromList
-                >> Pointer.getFromArray rule
+        RuleBought { rule } ->
+            Pointer.find .id rule
                 >> Maybe.andThen
                     (\r ->
-                        if r.trigger == TokenSpend amount then
-                            r |> List.singleton |> Just
+                        case r.trigger of
+                            TokenSpend _ ->
+                                r |> List.singleton |> Just
 
-                        else
-                            Nothing
+                            _ ->
+                                Nothing
                     )
                 >> Maybe.withDefault []
 

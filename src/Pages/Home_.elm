@@ -1,7 +1,6 @@
 module Pages.Home_ exposing (Model, Msg(..), page)
 
 import Bridge exposing (..)
-import Config.View
 import Data.Discussion exposing (Discussion)
 import Data.Discussion.Filters as Filters
 import Data.Response exposing (Response)
@@ -10,12 +9,11 @@ import Effect exposing (Effect)
 import Element exposing (Element)
 import Gen.Route as Route exposing (Route)
 import Html exposing (..)
-import Html.Attributes exposing (class, classList)
+import Html.Attributes exposing (class)
 import Html.Events as Events
 import Page
 import Request exposing (Request)
 import Shared
-import Utils.Maybe
 import View exposing (View)
 import View.Color as Color
 import View.DiscussionList
@@ -83,7 +81,7 @@ fetchDiscussionsForTab :
             , activeTab : Tab
         }
     -> Cmd Msg
-fetchDiscussionsForTab shared model =
+fetchDiscussionsForTab _ model =
     case model.activeTab of
         Global ->
             DiscussionList_Home_
@@ -92,7 +90,7 @@ fetchDiscussionsForTab shared model =
                 }
                 |> sendToBackend
 
-        FeedFor user ->
+        FeedFor _ ->
             DiscussionFeed_Home_
                 { page = model.page
                 }
@@ -152,7 +150,7 @@ update shared msg model =
             , fetchDiscussionsForTab shared newModel |> Effect.fromCmd
             )
 
-        ClickedFavorite user discussion ->
+        ClickedFavorite _ discussion ->
             ( model
             , DiscussionFavorite_Home_
                 { slug = discussion.slug
@@ -161,7 +159,7 @@ update shared msg model =
                 |> Effect.fromCmd
             )
 
-        ClickedUnfavorite user discussion ->
+        ClickedUnfavorite _ discussion ->
             ( model
             , DiscussionUnfavorite_Home_
                 { slug = discussion.slug
@@ -242,41 +240,6 @@ view shared model =
                 , Element.height Element.fill
                 ]
     }
-
-
-viewTabs :
-    Shared.Model
-    -> { model | activeTab : Tab }
-    -> Html Msg
-viewTabs shared model =
-    div [ class "feed-toggle" ]
-        [ ul [ class "nav nav-pills outline-active" ]
-            [ Utils.Maybe.view shared.user <|
-                \user ->
-                    li [ class "nav-item" ]
-                        [ button
-                            [ class "nav-link"
-                            , classList [ ( "active", model.activeTab == FeedFor user ) ]
-                            , Events.onClick (SelectedTab (FeedFor user))
-                            ]
-                            [ text "Your Feed" ]
-                        ]
-            , li [ class "nav-item" ]
-                [ button
-                    [ class "nav-link"
-                    , classList [ ( "active", model.activeTab == Global ) ]
-                    , Events.onClick (SelectedTab Global)
-                    ]
-                    [ text "Global Feed" ]
-                ]
-            , case model.activeTab of
-                TagFilter tag ->
-                    li [ class "nav-item" ] [ a [ class "nav-link active" ] [ text ("#" ++ tag) ] ]
-
-                _ ->
-                    text ""
-            ]
-        ]
 
 
 viewTags : Response (List Tag) -> Element Msg

@@ -183,8 +183,20 @@ updateFromFrontend sessionId clientId msg model =
                         Failure [ "you do not have permission for this discussion" ]
     in
     case msg of
-        SignedOut user ->
+        SignedOut _ ->
             ( { model | sessions = model.sessions |> Dict.remove sessionId }, Cmd.none )
+
+        SpendToken { rule, player } ->
+            ( { model
+                | game =
+                    model.game
+                        |> Game.spendToken
+                            { rule = rule
+                            , current = player
+                            }
+              }
+            , Cmd.none
+            )
 
         GetTags_Home_ ->
             let
@@ -232,12 +244,13 @@ updateFromFrontend sessionId clientId msg model =
             in
             send (PageMsg (Gen.Msg.Home_ (Pages.Home_.GotDiscussions (Success discussionList))))
 
-        DiscussionList_Username_ { filters, page } ->
-            let
-                discussionList =
-                    getListing model sessionId filters page
-            in
-            send (PageMsg (Gen.Msg.Profile__Id_ (Pages.Profile.Id_.GotDiscussions (Success discussionList))))
+        DiscussionList_Username_ ->
+            model.game.rules
+                |> Success
+                |> Pages.Profile.Id_.GotRules
+                |> Gen.Msg.Profile__Id_
+                |> PageMsg
+                |> send
 
         DiscussionGet_Editor__DiscussionSlug_ { slug } ->
             onlyWhenDiscussionOwner slug
@@ -284,16 +297,10 @@ updateFromFrontend sessionId clientId msg model =
                 )
 
         DiscussionFavorite_Profile__Id_ { slug } ->
-            favoriteDiscussion sessionId
-                slug
-                model
-                (\r -> send_ (PageMsg (Gen.Msg.Profile__Id_ (Pages.Profile.Id_.UpdatedDiscussion r))))
+            ( model, Cmd.none )
 
         DiscussionUnfavorite_Profile__Id_ { slug } ->
-            unfavoriteDiscussion sessionId
-                slug
-                model
-                (\r -> send_ (PageMsg (Gen.Msg.Profile__Id_ (Pages.Profile.Id_.UpdatedDiscussion r))))
+            ( model, Cmd.none )
 
         DiscussionFavorite_Home_ { slug } ->
             favoriteDiscussion sessionId

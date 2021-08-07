@@ -11,7 +11,6 @@ import Data.Game exposing (Game)
 import Data.Game.Player exposing (Player)
 import Data.Game.Pointer as Pointer exposing (Pointer)
 import Data.Profile exposing (Profile)
-import Dict
 
 
 type alias User =
@@ -19,6 +18,7 @@ type alias User =
     , email : Email
     , username : String
     , bio : Maybe String
+    , player : Pointer Player
     , tokens : Int
     , points : Int
     }
@@ -66,6 +66,7 @@ toUser game u =
     , bio = u.bio
     , tokens = player |> Maybe.map .tokens |> Maybe.withDefault 0
     , points = player |> Maybe.map .points |> Maybe.withDefault 0
+    , player = u.player
     }
 
 

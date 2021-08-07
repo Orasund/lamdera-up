@@ -10,14 +10,11 @@ import Data.Discussion exposing (Discussion)
 import Data.Response exposing (Response)
 import Element exposing (Element)
 import Element.Border as Border
-import Element.Input as Input
 import Html exposing (..)
-import Html.Attributes exposing (attribute, class, placeholder, type_, value)
-import Html.Events as Events
+import Html.Attributes exposing (class, value)
 import View.Color as Color
 import View.Input
 import Widget
-import Widget.Customize as Customize
 import Widget.Material as Material
 import Widget.Material.Typography as Typography
 

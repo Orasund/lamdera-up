@@ -1,7 +1,8 @@
-module Data.Game.Pointer exposing (Pointer, fromInt, get, getFromArray, update)
+module Data.Game.Pointer exposing (Pointer, find, fromInt, get, update)
 
 import Array exposing (Array)
 import Dict exposing (Dict)
+import List.Extra as List
 
 
 type Pointer a
@@ -13,9 +14,9 @@ fromInt int =
     Pointer int
 
 
-getFromArray : Pointer a -> Array a -> Maybe a
-getFromArray (Pointer int) =
-    Array.get int
+find : (a -> Int) -> Pointer a -> List a -> Maybe a
+find fun (Pointer int) =
+    List.find (fun >> (==) int)
 
 
 get : Pointer a -> Dict Int a -> Maybe a

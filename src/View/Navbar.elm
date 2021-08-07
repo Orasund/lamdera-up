@@ -2,12 +2,9 @@ module View.Navbar exposing (view)
 
 import Array
 import Data.User exposing (User)
-import Dict
 import Element exposing (Element)
 import Gen.Route as Route exposing (Route)
 import Html exposing (..)
-import Html.Attributes exposing (class, classList, href)
-import Html.Events as Events
 import View.Color as Color
 import Widget
 import Widget.Material as Material
@@ -29,7 +26,7 @@ view options =
         menu =
             case options.user of
                 Just user ->
-                    [ ( "Profil", Route.Profile__Id_ { id = user.id |> String.fromInt } )
+                    [ ( "Profile", Route.Profile__Id_ { id = user.id |> String.fromInt } )
                     ]
 
                 Nothing ->
@@ -39,7 +36,7 @@ view options =
             menu
                 |> List.indexedMap Tuple.pair
                 |> List.filterMap
-                    (\( i, ( string, route ) ) ->
+                    (\( i, ( _, route ) ) ->
                         if route == options.currentRoute then
                             Just <| i + 1
 
@@ -108,15 +105,3 @@ view options =
                     ]
         , search = Nothing
         }
-
-
-viewLink : Route -> ( String, Route ) -> Html msg
-viewLink currentRoute ( label, route ) =
-    li [ class "nav-item" ]
-        [ a
-            [ class "nav-link"
-            , classList [ ( "active", currentRoute == route ) ]
-            , href (Route.toHref route)
-            ]
-            [ text label ]
-        ]

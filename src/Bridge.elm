@@ -1,6 +1,9 @@
 module Bridge exposing (..)
 
 import Data.Discussion.Filters exposing (Filters)
+import Data.Game exposing (Rule)
+import Data.Game.Player exposing (Player)
+import Data.Game.Pointer exposing (Pointer)
 import Data.User exposing (User)
 import Lamdera
 
@@ -11,11 +14,12 @@ sendToBackend =
 
 type ToBackend
     = SignedOut User
+    | SpendToken { rule : Pointer Rule, player : Pointer Player }
       -- Req/resp paired messages
     | GetTags_Home_
     | DiscussionList_Home_ { filters : Filters, page : Int }
     | DiscussionFeed_Home_ { page : Int }
-    | DiscussionList_Username_ { filters : Filters, page : Int }
+    | DiscussionList_Username_
     | DiscussionGet_Editor__DiscussionSlug_ { slug : String }
     | DiscussionGet_Discussion__Slug_ { slug : String }
     | DiscussionCreate_Editor
