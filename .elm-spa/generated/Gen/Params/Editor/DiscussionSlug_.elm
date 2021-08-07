@@ -9,3 +9,4 @@ type alias Params =
 
 parser =
     Parser.map Params (Parser.s "editor" </> Parser.string)
+

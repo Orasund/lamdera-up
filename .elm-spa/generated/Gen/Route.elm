@@ -4,15 +4,15 @@ module Gen.Route exposing
     , toHref
     )
 
-import Gen.Params.Discussion.Slug_
 import Gen.Params.Editor
-import Gen.Params.Editor.DiscussionSlug_
 import Gen.Params.Home_
 import Gen.Params.Login
 import Gen.Params.NotFound
-import Gen.Params.Profile.Id_
 import Gen.Params.Register
 import Gen.Params.Settings
+import Gen.Params.Discussion.Slug_
+import Gen.Params.Editor.DiscussionSlug_
+import Gen.Params.Profile.Id_
 import Url exposing (Url)
 import Url.Parser as Parser exposing ((</>), Parser)
 
@@ -58,27 +58,28 @@ toHref route =
     case route of
         Editor ->
             joinAsHref [ "editor" ]
-
+    
         Home_ ->
             joinAsHref []
-
+    
         Login ->
             joinAsHref [ "login" ]
-
+    
         NotFound ->
             joinAsHref [ "not-found" ]
-
+    
         Register ->
             joinAsHref [ "register" ]
-
+    
         Settings ->
             joinAsHref [ "settings" ]
-
+    
         Discussion__Slug_ params ->
             joinAsHref [ "discussion", params.slug ]
-
+    
         Editor__DiscussionSlug_ params ->
             joinAsHref [ "editor", params.discussionSlug ]
-
+    
         Profile__Id_ params ->
             joinAsHref [ "profile", params.id ]
+

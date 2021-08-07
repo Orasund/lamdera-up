@@ -44,13 +44,13 @@ view options =
             |> Element.el [ Element.centerX ]
       ]
         |> Element.column
-            [ Element.spacing 8
+            [ Element.spacing Config.View.spacing
             , Element.centerX
             ]
     , options.fields
         |> List.map viewField
         |> Element.column
-            [ Element.spacing 16
+            [ Element.spacing <| 2 * Config.View.spacing
             ]
     , case options.user of
         Data.Response.Failure reasons ->

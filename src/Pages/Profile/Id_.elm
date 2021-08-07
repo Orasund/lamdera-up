@@ -7,9 +7,11 @@ import Data.Discussion.Filters as Filters
 import Data.Profile exposing (Profile)
 import Data.Response exposing (Response)
 import Data.User exposing (User)
+import Effect exposing (Effect)
 import Element exposing (Element)
 import Element.Border as Border
 import Gen.Params.Profile.Id_ exposing (Params)
+import Gen.Route exposing (Route)
 import Html exposing (..)
 import Html.Attributes exposing (class, classList)
 import Html.Events as Events
@@ -25,7 +27,7 @@ import Widget.Material.Typography as Typography
 
 page : Shared.Model -> Request.With Params -> Page.With Model Msg
 page shared req =
-    Page.element
+    Page.advanced
         { init = init shared req
         , update = update shared
         , subscriptions = subscriptions
@@ -51,7 +53,7 @@ type Tab
     | FavoritedDiscussions
 
 
-init : Shared.Model -> Request.With Params -> ( Model, Cmd Msg )
+init : Shared.Model -> Request.With Params -> ( Model, Effect Msg )
 init shared { params } =
     let
         id =
@@ -68,6 +70,7 @@ init shared { params } =
             |> sendToBackend
         , fetchDiscussionsBy id 1
         ]
+        |> Effect.fromCmd
     )
 
 
@@ -104,14 +107,15 @@ type Msg
     | ClickedFollow User Profile
     | ClickedUnfollow User Profile
     | ClickedPage Int
+    | RequestedRouteChange Route
 
 
-update : Shared.Model -> Msg -> Model -> ( Model, Cmd Msg )
+update : Shared.Model -> Msg -> Model -> ( Model, Effect Msg )
 update shared msg model =
     case msg of
         GotProfile profile ->
             ( { model | profile = profile }
-            , Cmd.none
+            , Effect.none
             )
 
         ClickedFollow user profile ->
@@ -120,6 +124,7 @@ update shared msg model =
                 { id = profile.id
                 }
                 |> sendToBackend
+                |> Effect.fromCmd
             )
 
         ClickedUnfollow user profile ->
@@ -128,11 +133,12 @@ update shared msg model =
                 { id = profile.id
                 }
                 |> sendToBackend
+                |> Effect.fromCmd
             )
 
         GotDiscussions listing ->
             ( { model | listing = listing }
-            , Cmd.none
+            , Effect.none
             )
 
         Clicked MyDiscussions ->
@@ -141,7 +147,7 @@ update shared msg model =
                 , listing = Data.Response.Loading
                 , page = 1
               }
-            , fetchDiscussionsBy model.id 1
+            , fetchDiscussionsBy model.id 1 |> Effect.fromCmd
             )
 
         Clicked FavoritedDiscussions ->
@@ -150,7 +156,7 @@ update shared msg model =
                 , listing = Data.Response.Loading
                 , page = 1
               }
-            , fetchDiscussionsFavoritedBy model.id 1
+            , fetchDiscussionsFavoritedBy model.id 1 |> Effect.fromCmd
             )
 
         ClickedFavorite user discussion ->
@@ -159,6 +165,7 @@ update shared msg model =
                 { slug = discussion.slug
                 }
                 |> sendToBackend
+                |> Effect.fromCmd
             )
 
         ClickedUnfavorite user discussion ->
@@ -167,6 +174,7 @@ update shared msg model =
                 { slug = discussion.slug
                 }
                 |> sendToBackend
+                |> Effect.fromCmd
             )
 
         ClickedPage page_ ->
@@ -187,6 +195,7 @@ update shared msg model =
             , fetch
                 model.id
                 page_
+                |> Effect.fromCmd
             )
 
         UpdatedDiscussion (Data.Response.Success discussion) ->
@@ -195,11 +204,14 @@ update shared msg model =
                     Data.Response.map (Data.Discussion.updateDiscussion discussion)
                         model.listing
               }
-            , Cmd.none
+            , Effect.none
             )
 
         UpdatedDiscussion _ ->
-            ( model, Cmd.none )
+            ( model, Effect.none )
+
+        RequestedRouteChange route ->
+            ( model, Shared.RequestedRouteChange route |> Effect.fromShared )
 
 
 subscriptions : Model -> Sub Msg
@@ -220,7 +232,7 @@ view shared model =
                 viewProfile shared profile model
 
             Data.Response.Failure _ ->
-                View.NotFound.view
+                View.NotFound.view RequestedRouteChange
 
             _ ->
                 Element.none
