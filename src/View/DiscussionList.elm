@@ -1,14 +1,16 @@
 module View.DiscussionList exposing (view)
 
-import Data.Discussion exposing (Discussion)
+import Config.View
+import Data.Discussion exposing (Discussion, Slug)
 import Data.Response exposing (Response)
 import Data.User exposing (User)
+import Element exposing (Element)
 import Html exposing (..)
-import Html.Attributes exposing (alt, class, classList, href, src)
+import Html.Attributes exposing (class, classList)
 import Html.Events as Events
-import Utils.Maybe
-import Utils.Time
-import View.IconButton as IconButton
+import View.Color as Color
+import Widget exposing (Item)
+import Widget.Material as Material
 
 
 view :
@@ -17,90 +19,65 @@ view :
     , onFavorite : User -> Discussion -> msg
     , onUnfavorite : User -> Discussion -> msg
     , onPageClick : Int -> msg
+    , onClick : Slug -> msg
+    , onNewDiscussion : msg
     }
-    -> List (Html msg)
+    -> Element msg
 view options =
-    case options.discussionListing of
-        Data.Response.Loading ->
-            [ div [ class "discussion-preview" ] [ text "Loading..." ] ]
+    let
+        list =
+            case options.discussionListing of
+                Data.Response.Loading ->
+                    []
 
-        Data.Response.Success listing ->
-            let
-                viewPage : Int -> Html msg
-                viewPage page =
-                    li
-                        [ class "page-item"
-                        , classList [ ( "active", listing.page == page ) ]
+                Data.Response.Success listing ->
+                    let
+                        viewPage : Int -> Html msg
+                        viewPage page =
+                            li
+                                [ class "page-item"
+                                , classList [ ( "active", listing.page == page ) ]
+                                ]
+                                [ button
+                                    [ class "page-link"
+                                    , Events.onClick (options.onPageClick page)
+                                    ]
+                                    [ text (String.fromInt page) ]
+                                ]
+                    in
+                    List.concat
+                        [ listing.discussions
+                            |> List.map (viewDiscussionPreview options.onClick)
+                        , [ List.range 1 listing.totalPages
+                                |> List.map viewPage
+                                |> ul [ class "pagination" ]
+                                |> Element.html
+                                |> Element.el [ Element.padding Config.View.padding ]
+                                |> Widget.asItem
+                          ]
                         ]
-                        [ button
-                            [ class "page-link"
-                            , Events.onClick (options.onPageClick page)
-                            ]
-                            [ text (String.fromInt page) ]
-                        ]
-            in
-            List.concat
-                [ List.map (viewDiscussionPreview options) listing.discussions
-                , [ List.range 1 listing.totalPages
-                        |> List.map viewPage
-                        |> ul [ class "pagination" ]
-                  ]
-                ]
 
-        _ ->
-            []
+                _ ->
+                    []
+    in
+    Widget.fullBleedItem (Material.fullBleedItem Color.palette)
+        { text = "New Discussion"
+        , icon = always Element.none
+        , onPress = Just options.onNewDiscussion
+        }
+        :: list
+        |> Widget.itemList (Material.sideSheet Color.palette)
 
 
 viewDiscussionPreview :
-    { options
-        | user : Maybe User
-        , onFavorite : User -> Discussion -> msg
-        , onUnfavorite : User -> Discussion -> msg
-    }
+    (Slug -> msg)
     -> Discussion
-    -> Html msg
-viewDiscussionPreview options discussion =
-    div [ class "discussion-preview" ]
-        [ div [ class "discussion-meta" ]
-            [ div [ class "info" ]
-                [ a [ class "author", href ("/profile/" ++ discussion.author.username) ] [ text discussion.author.username ]
-                , span [ class "date" ] [ text (Utils.Time.formatDate discussion.createdAt) ]
-                ]
-            , div [ class "pull-xs-right" ]
-                [ Utils.Maybe.view options.user <|
-                    \user ->
-                        if user.username == discussion.author.username then
-                            text ""
-
-                        else if discussion.favorited then
-                            IconButton.view
-                                { color = IconButton.FilledGreen
-                                , icon = IconButton.Heart
-                                , label = " " ++ String.fromInt discussion.favoritesCount
-                                , onClick = options.onUnfavorite user discussion
-                                }
-
-                        else
-                            IconButton.view
-                                { color = IconButton.OutlinedGreen
-                                , icon = IconButton.Heart
-                                , label = " " ++ String.fromInt discussion.favoritesCount
-                                , onClick = options.onFavorite user discussion
-                                }
-                ]
-            ]
-        , a [ class "preview-link", href ("/discussion/" ++ discussion.slug) ]
-            [ h1 [] [ text discussion.title ]
-            , p [] [ text discussion.description ]
-            , span [] [ text "Read more..." ]
-            , if List.isEmpty discussion.tags then
-                text ""
-
-              else
-                ul [ class "tag-list" ]
-                    (List.map
-                        (\tag -> li [ class "tag-default tag-pill tag-outline" ] [ text tag ])
-                        discussion.tags
-                    )
-            ]
-        ]
+    -> Item msg
+viewDiscussionPreview onClick discussion =
+    Widget.multiLineItem (Material.multiLineItem Color.palette)
+        { title = discussion.title
+        , text = "By " ++ discussion.author.username
+        , onPress = discussion.slug |> onClick |> Just
+        , icon = always Element.none
+        , content = always Element.none
+        }

@@ -77,7 +77,7 @@ type Msg
 
 
 update : Shared.Model -> Msg -> Model -> ( Model, Effect Msg )
-update shared msg model =
+update _ msg model =
     case msg of
         GotProfile profile ->
             ( { model | profile = profile }
@@ -108,16 +108,11 @@ update shared msg model =
             )
 
         TriggeredRule rule ->
-            shared.user
-                |> Maybe.map
-                    (\{ player } ->
-                        ( model
-                        , SpendToken rule
-                            |> sendToBackend
-                            |> Effect.fromCmd
-                        )
-                    )
-                |> Maybe.withDefault ( model, Effect.none )
+            ( model
+            , SpendToken rule
+                |> sendToBackend
+                |> Effect.fromCmd
+            )
 
         RequestedRouteChange route ->
             ( model, Shared.RequestedRouteChange route |> Effect.fromShared )

@@ -2,9 +2,8 @@ module View.NotFound exposing (view)
 
 import Config.View
 import Element exposing (Element)
-import Gen.Route as Route exposing (Route(..))
+import Gen.Route exposing (Route(..))
 import Html exposing (..)
-import Html.Attributes exposing (class, href)
 import View.Color as Color
 import Widget
 import Widget.Material as Material

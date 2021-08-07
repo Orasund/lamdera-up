@@ -2,8 +2,9 @@ module Pages.Discussion.Slug_ exposing (Model, Msg(..), page)
 
 import Bridge exposing (..)
 import Config.View
-import Data.Discussion exposing (Discussion)
+import Data.Discussion exposing (Discussion, Slug)
 import Data.Discussion.Comment exposing (Comment)
+import Data.Discussion.Filters as Filters
 import Data.Profile exposing (Profile)
 import Data.Response exposing (Response)
 import Data.User exposing (User)
@@ -21,6 +22,7 @@ import Utils.Route
 import Utils.Time
 import View exposing (View)
 import View.Color as Color
+import View.DiscussionList
 import View.IconButton as IconButton
 import View.Input
 import Widget
@@ -45,15 +47,24 @@ type alias Model =
     { discussion : Response Discussion
     , comments : Response (List Comment)
     , commentText : String
+    , listing : Response Data.Discussion.Listing
+    , page : Int
     }
 
 
 init : Shared.Model -> Request.With Params -> ( Model, Effect Msg )
 init shared { params } =
-    ( { discussion = Data.Response.Loading
-      , comments = Data.Response.Loading
-      , commentText = ""
-      }
+    let
+        model : Model
+        model =
+            { discussion = Data.Response.Loading
+            , comments = Data.Response.Loading
+            , commentText = ""
+            , listing = Data.Response.Loading
+            , page = 1
+            }
+    in
+    ( model
     , Cmd.batch
         [ DiscussionGet_Discussion__Slug_
             { slug = params.slug
@@ -61,6 +72,11 @@ init shared { params } =
             |> sendToBackend
         , DiscussionCommentGet_Discussion__Slug_
             { discussionSlug = params.slug
+            }
+            |> sendToBackend
+        , DiscussionList_Discussion__Slug_
+            { filters = Filters.create
+            , page = model.page
             }
             |> sendToBackend
         ]
@@ -87,7 +103,11 @@ type Msg
     | SubmittedCommentForm User Discussion
     | CreatedComment (Response Comment)
     | UpdatedCommentText String
+    | GotDiscussions (Response Data.Discussion.Listing)
+    | ClickedPage Int
+    | UpdatedDiscussion (Response Discussion)
     | RequestedRouteChange Route
+    | LoadDiscussion Slug
 
 
 update : Request.With Params -> Msg -> Model -> ( Model, Effect Msg )
@@ -214,8 +234,41 @@ update req msg model =
             , Effect.none
             )
 
+        GotDiscussions listing ->
+            ( { model | listing = listing }
+            , Effect.none
+            )
+
+        ClickedPage page_ ->
+            let
+                newModel : Model
+                newModel =
+                    { model
+                        | listing = Data.Response.Loading
+                        , page = page_
+                    }
+            in
+            ( newModel
+            , Effect.none
+            )
+
+        UpdatedDiscussion (Data.Response.Success discussion) ->
+            ( { model
+                | listing =
+                    Data.Response.map (Data.Discussion.updateDiscussion discussion)
+                        model.listing
+              }
+            , Effect.none
+            )
+
+        UpdatedDiscussion _ ->
+            ( model, Effect.none )
+
         RequestedRouteChange route ->
             ( model, Shared.RequestedRouteChange route |> Effect.fromShared )
+
+        LoadDiscussion slug ->
+            ( model, Effect.none )
 
 
 subscriptions : Model -> Sub Msg
@@ -243,16 +296,25 @@ view shared model =
 
 viewDiscussion : Shared.Model -> Model -> Discussion -> Element Msg
 viewDiscussion shared model discussion =
-    [ div [ class "container" ]
-        [ h1 [] [ text discussion.title ]
-        , viewDiscussionMeta shared discussion
-        ]
-        |> Element.html
-        |> Element.el
-            [ Element.width <| Element.fill
-            , Element.htmlAttribute <| class "banner"
+    [ View.DiscussionList.view
+        { user = shared.user
+        , discussionListing = model.listing
+        , onFavorite = ClickedFavorite
+        , onUnfavorite = ClickedUnfavorite
+        , onPageClick = ClickedPage
+        , onClick = LoadDiscussion
+        , onNewDiscussion = Route.Editor |> RequestedRouteChange
+        }
+    , [ div [ class "container" ]
+            [ h1 [] [ text discussion.title ]
+            , viewDiscussionMeta shared discussion
             ]
-    , [ div [ class "row discussion-content" ]
+            |> Element.html
+            |> Element.el
+                [ Element.width <| Element.fill
+                , Element.htmlAttribute <| class "banner"
+                ]
+      , [ div [ class "row discussion-content" ]
             [ div [ class "col-md-12" ]
                 [ Markdown.toHtml [] discussion.body ]
             , if List.isEmpty discussion.tags then
@@ -266,19 +328,24 @@ viewDiscussion shared model discussion =
                     )
             ]
             |> Element.html
-      , hr [] [] |> Element.html
-      , div [ class "discussion-actions" ] [ viewDiscussionMeta shared discussion ]
+        , hr [] [] |> Element.html
+        , div [ class "discussion-actions" ] [ viewDiscussionMeta shared discussion ]
             |> Element.html
-      , viewCommentSection shared model discussion
+        , viewCommentSection shared model discussion
+        ]
+            |> Element.column
+                [ class "container page" |> Element.htmlAttribute
+                , Element.width <| Element.fill
+                ]
       ]
-        |> Element.column
-            [ class "container page" |> Element.htmlAttribute
-            , Element.width <| Element.fill
-            ]
-    ]
         |> Element.column
             [ Element.width <| Element.fill
             , class "discussion-page" |> Element.htmlAttribute
+            ]
+    ]
+        |> Element.row
+            [ Element.width Element.fill
+            , Element.height Element.fill
             ]
 
 

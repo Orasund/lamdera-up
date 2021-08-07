@@ -6,19 +6,15 @@ import Data.Discussion.Filters as Filters
 import Data.Response exposing (Response)
 import Data.User exposing (User)
 import Effect exposing (Effect)
-import Element exposing (Element)
-import Gen.Route as Route exposing (Route)
+import Element
+import Gen.Route as Route exposing (Route(..))
 import Html exposing (..)
 import Html.Attributes exposing (class)
-import Html.Events as Events
 import Page
 import Request exposing (Request)
 import Shared
 import View exposing (View)
-import View.Color as Color
 import View.DiscussionList
-import Widget
-import Widget.Material as Material
 
 
 page : Shared.Model -> Request -> Page.With Model Msg
@@ -211,55 +207,34 @@ view : Shared.Model -> Model -> View Msg
 view shared model =
     { title = ""
     , body =
-        [ [ (Widget.textButton (Material.textButton Color.palette)
-                { text = "Start Discussion"
-                , onPress = Route.Editor |> RequestedRouteChange |> Just
-                }
-                :: (View.DiscussionList.view
-                        { user = shared.user
-                        , discussionListing = model.listing
-                        , onFavorite = ClickedFavorite
-                        , onUnfavorite = ClickedUnfavorite
-                        , onPageClick = ClickedPage
-                        }
-                        |> List.map Element.html
-                   )
-            )
-                |> Element.row []
-          , viewTags model.tags
+        [ View.DiscussionList.view
+            { user = shared.user
+            , discussionListing = model.listing
+            , onFavorite = ClickedFavorite
+            , onUnfavorite = ClickedUnfavorite
+            , onPageClick = ClickedPage
+            , onClick =
+                \slug ->
+                    { slug = slug }
+                        |> Discussion__Slug_
+                        |> RequestedRouteChange
+            , onNewDiscussion = Route.Editor |> RequestedRouteChange
+            }
+        , [ []
+                |> Element.row
+                    [ Element.htmlAttribute <| class "container page"
+                    , Element.width <| Element.fill
+                    , Element.spaceEvenly
+                    ]
           ]
-            |> Element.row
-                [ Element.htmlAttribute <| class "container page"
-                , Element.width <| Element.fill
-                , Element.spaceEvenly
-                ]
-        ]
             |> Element.column
                 [ Element.htmlAttribute <| class "home-page"
                 , Element.width Element.fill
                 , Element.height Element.fill
                 ]
-    }
-
-
-viewTags : Response (List Tag) -> Element Msg
-viewTags response =
-    case response of
-        Data.Response.Success tags ->
-            div [ class "sidebar" ]
-                [ p [] [ text "Popular Tags" ]
-                , div [ class "tag-list" ] <|
-                    List.map
-                        (\tag ->
-                            button
-                                [ class "tag-pill tag-default"
-                                , Events.onClick (SelectedTab (TagFilter tag))
-                                ]
-                                [ text tag ]
-                        )
-                        tags
+        ]
+            |> Element.row
+                [ Element.width Element.fill
+                , Element.height Element.fill
                 ]
-                |> Element.html
-
-        _ ->
-            Element.text ""
+    }

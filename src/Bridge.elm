@@ -2,7 +2,6 @@ module Bridge exposing (..)
 
 import Data.Discussion.Filters exposing (Filters)
 import Data.Game exposing (Rule)
-import Data.Game.Player exposing (Player)
 import Data.Game.Pointer exposing (Pointer)
 import Data.User exposing (User)
 import Lamdera
@@ -41,6 +40,7 @@ type ToBackend
     | DiscussionCommentGet_Discussion__Slug_ { discussionSlug : String }
     | DiscussionCommentCreate_Discussion__Slug_ { discussionSlug : String, comment : { body : String } }
     | DiscussionCommentDelete_Discussion__Slug_ { discussionSlug : String, commentId : Int }
+    | DiscussionList_Discussion__Slug_ { filters : Filters, page : Int }
     | ProfileGet_Profile__Id_ { id : Int }
     | ProfileFollow_Profile__Id_ { id : Int }
     | ProfileUnfollow_Profile__Id_ { id : Int }

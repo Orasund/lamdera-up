@@ -93,7 +93,7 @@ update req msg model =
             , Cmd.none
             )
 
-        SubmittedForm user form ->
+        SubmittedForm _ form ->
             ( model
             , DiscussionUpdate_Editor__DiscussionSlug_
                 { slug = model.slug

@@ -71,20 +71,10 @@ view options =
             , label = "Discussion Title"
             , onChange = options.onUpdate Title
             }
-      , View.Input.textInput
-            { text = options.form.description
-            , label = "What's this discussion about?"
-            , onChange = options.onUpdate Description
-            }
       , View.Input.multiLineInput
-            { onChange = options.onUpdate Body
-            , text = options.form.body
+            { onChange = options.onUpdate Description
+            , text = options.form.description
             , label = "Write your discussion (in markdown)"
-            }
-      , View.Input.textInput
-            { text = options.form.tags
-            , label = "Enter tags (separated by commas)"
-            , onChange = options.onUpdate Tags
             }
       ]
         |> Element.column

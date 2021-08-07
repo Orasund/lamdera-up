@@ -230,9 +230,16 @@ updateFromFrontend sessionId clientId msg model =
         GetTags_Home_ ->
             let
                 allTags =
-                    model.discussions |> Dict.foldl (\slug discussion tags -> tags ++ discussion.tags) [] |> List.unique
+                    model.discussions |> Dict.foldl (\_ discussion tags -> tags ++ discussion.tags) [] |> List.unique
             in
             send (PageMsg (Gen.Msg.Home_ (Pages.Home_.GotTags (Success allTags))))
+
+        DiscussionList_Discussion__Slug_ { filters, page } ->
+            let
+                discussionList =
+                    getListing model sessionId filters page
+            in
+            send (PageMsg (Gen.Msg.Discussion__Slug_ (Pages.Discussion.Slug_.GotDiscussions (Success discussionList))))
 
         DiscussionList_Home_ { filters, page } ->
             let
@@ -252,10 +259,10 @@ updateFromFrontend sessionId clientId msg model =
                             let
                                 filtered =
                                     model.discussions
-                                        |> Dict.filter (\slug discussion -> List.member discussion.userId user.following)
+                                        |> Dict.filter (\_ discussion -> List.member discussion.userId user.following)
 
                                 enriched =
-                                    filtered |> Dict.map (\slug discussion -> loadDiscussionFromStore model userM discussion)
+                                    filtered |> Dict.map (\_ discussion -> loadDiscussionFromStore model userM discussion)
 
                                 grouped =
                                     enriched |> Dict.values |> List.greedyGroupsOf Data.Discussion.itemsPerPage
@@ -325,10 +332,10 @@ updateFromFrontend sessionId clientId msg model =
                     )
                 )
 
-        DiscussionFavorite_Profile__Id_ { slug } ->
+        DiscussionFavorite_Profile__Id_ _ ->
             ( model, Cmd.none )
 
-        DiscussionUnfavorite_Profile__Id_ { slug } ->
+        DiscussionUnfavorite_Profile__Id_ _ ->
             ( model, Cmd.none )
 
         DiscussionFavorite_Home_ { slug } ->
@@ -422,9 +429,9 @@ updateFromFrontend sessionId clientId msg model =
             let
                 ( response, cmd ) =
                     model.users
-                        |> Dict.find (\k u -> u.email == params.email)
+                        |> Dict.find (\_ u -> u.email == params.email)
                         |> Maybe.map
-                            (\( k, u ) ->
+                            (\( _, u ) ->
                                 if u.password == params.password then
                                     ( Success (User.toUser model.game u)
                                     , renewSession u.id sessionId clientId
@@ -440,7 +447,7 @@ updateFromFrontend sessionId clientId msg model =
         UserRegistration_Register { params } ->
             let
                 ( model_, cmd, res ) =
-                    if model.users |> Dict.any (\k u -> u.email == params.email) then
+                    if model.users |> Dict.any (\_ u -> u.email == params.email) then
                         ( model, Cmd.none, Failure [ "email address already taken" ] )
 
                     else
@@ -525,7 +532,7 @@ getListing model sessionId (Filters { tag, author, favorited }) page =
                 |> Filters.byAuthor author model.users
 
         enriched =
-            filtered |> Dict.map (\slug discussion -> loadDiscussionFromStore model (model |> getSessionUser sessionId) discussion)
+            filtered |> Dict.map (\_ discussion -> loadDiscussionFromStore model (model |> getSessionUser sessionId) discussion)
 
         grouped =
             enriched |> Dict.values |> List.greedyGroupsOf Data.Discussion.itemsPerPage
@@ -614,7 +621,7 @@ followUser sessionId id model toResponseCmd =
     in
     case model |> getSessionUser sessionId of
         Just user ->
-            ( case model.users |> Dict.find (\l u -> u.id == id) of
+            ( case model.users |> Dict.find (\_ u -> u.id == id) of
                 Just ( _, follow ) ->
                     model |> updateUser { user | following = (follow.id :: user.following) |> List.unique }
 
@@ -629,7 +636,7 @@ followUser sessionId id model toResponseCmd =
 
 unfollowUser : SessionId -> Int -> Model -> (Response Profile -> Cmd msg) -> ( Model, Cmd msg )
 unfollowUser sessionId id model toResponseCmd =
-    case model.users |> Dict.find (\k u -> u.id == id) of
+    case model.users |> Dict.find (\_ u -> u.id == id) of
         Just ( _, followed ) ->
             let
                 res =
