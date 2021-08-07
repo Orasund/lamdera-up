@@ -14,7 +14,7 @@ sendToBackend =
 
 type ToBackend
     = SignedOut User
-    | SpendToken { rule : Pointer Rule, player : Pointer Player }
+    | SpendToken (Pointer Rule)
       -- Req/resp paired messages
     | GetTags_Home_
     | DiscussionList_Home_ { filters : Filters, page : Int }

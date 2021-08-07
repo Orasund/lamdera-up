@@ -112,7 +112,7 @@ update shared msg model =
                 |> Maybe.map
                     (\{ player } ->
                         ( model
-                        , SpendToken { rule = rule, player = player }
+                        , SpendToken rule
                             |> sendToBackend
                             |> Effect.fromCmd
                         )
@@ -162,18 +162,17 @@ viewProfile shared profile model =
 
                 _ ->
                     []
+
+        tokens =
+            shared.user
+                |> Maybe.map .tokens
+                |> Maybe.withDefault 0
     in
     [ [ Element.text profile.username |> Element.el Typography.h2
       , profile.bio |> Maybe.map Element.text |> Maybe.withDefault Element.none
       , Element.text <| "Points: " ++ String.fromInt profile.points
       , if isViewingOwnProfile then
-            Element.text <|
-                "Tokens: "
-                    ++ (shared.user
-                            |> Maybe.map .tokens
-                            |> Maybe.withDefault 0
-                            |> String.fromInt
-                       )
+            Element.text <| "Tokens: " ++ String.fromInt tokens
 
         else
             Element.none
@@ -182,10 +181,17 @@ viewProfile shared profile model =
             [ Element.spacing Config.View.spacing
             ]
     , if isViewingOwnProfile then
-        rules
-            |> List.map (Rule.view TriggeredRule)
+        ((Element.text "Actions" |> Element.el Typography.h4)
+            :: (rules
+                    |> List.map
+                        (Rule.view
+                            { msgMapper = TriggeredRule, tokens = tokens }
+                        )
+               )
+        )
             |> Element.column
                 [ Element.spacing Config.View.spacing
+                , Element.width Element.fill
                 ]
 
       else
@@ -195,7 +201,7 @@ viewProfile shared profile model =
             (Material.cardAttributes Color.palette
                 ++ [ Border.rounded Config.View.rounded
                    , Element.padding Config.View.padding
-                   , Element.spacing Config.View.spacing
+                   , Element.spacing (2 * Config.View.spacing)
                    , Element.width <| Element.maximum Config.View.maxWidth <| Element.fill
                    , Element.centerX
                    , Element.centerY

@@ -1,6 +1,8 @@
 module Backend exposing (..)
 
+import Backend.Observer as Observer
 import Bridge exposing (..)
+import Config
 import Data.Discussion exposing (Discussion, DiscussionStore, Slug)
 import Data.Discussion.Filters as Filters exposing (Filters(..))
 import Data.Game as Game
@@ -186,17 +188,25 @@ updateFromFrontend sessionId clientId msg model =
         SignedOut _ ->
             ( { model | sessions = model.sessions |> Dict.remove sessionId }, Cmd.none )
 
-        SpendToken { rule, player } ->
-            ( { model
-                | game =
-                    model.game
-                        |> Game.spendToken
-                            { rule = rule
-                            , current = player
-                            }
-              }
-            , Cmd.none
-            )
+        SpendToken rule ->
+            model
+                |> getSessionUser sessionId
+                |> Maybe.map
+                    (\userFull ->
+                        let
+                            game =
+                                model.game
+                                    |> Game.spendToken
+                                        { rule = rule
+                                        , current = userFull.player
+                                        }
+                        in
+                        ( { model | game = game }
+                        , game
+                            |> Observer.updatedGame { userFull = userFull, clientId = clientId }
+                        )
+                    )
+                |> Maybe.withDefault ( model, Cmd.none )
 
         GetTags_Home_ ->
             let
@@ -459,7 +469,9 @@ updateFromFrontend sessionId clientId msg model =
                                             , bio = Just params.bio
                                         }
                                 in
-                                ( model |> updateUser user_, Success (User.toUser model.game user_) )
+                                ( model |> updateUser user_
+                                , Success (User.toUser model.game user_)
+                                )
 
                             else
                                 ( model, Failure [ "Old password is incorrect" ] )
@@ -630,13 +642,13 @@ updateUser user model =
 
 profileById id model =
     model.users
-        |> Dict.find (\k u -> u.id == id)
+        |> Dict.find (\_ u -> u.id == id)
         |> Maybe.map (Tuple.second >> User.toProfile model.game)
 
 
 profileByEmail email model =
     model.users
-        |> Dict.find (\k u -> u.email == email)
+        |> Dict.find (\_ u -> u.email == email)
         |> Maybe.map (Tuple.second >> User.toProfile model.game)
 
 
@@ -672,7 +684,7 @@ loadDiscussionFromStore model userM store =
 
 
 subscriptions : Model -> Sub BackendMsg
-subscriptions m =
+subscriptions _ =
     let
         second =
             1000
@@ -688,5 +700,12 @@ subscriptions m =
     in
     Sub.batch
         [ onConnect CheckSession
-        , Time.every day (always <| DayPassed)
+        , Time.every
+            (if Config.debugMode then
+                minute
+
+             else
+                day
+            )
+            (always <| DayPassed)
         ]
