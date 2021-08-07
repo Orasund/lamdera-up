@@ -10,6 +10,7 @@ import Data.User exposing (User, UserFull, UserId)
 import Dict exposing (Dict)
 import Gen.Pages as Pages
 import Lamdera exposing (ClientId, SessionId)
+import Random exposing (Seed)
 import Shared
 import Time
 import Url exposing (Url)
@@ -30,6 +31,7 @@ type alias BackendModel =
     , comments : Dict Slug (Dict Int Comment)
     , game : Game
     , daysPassed : Int
+    , seed : Seed
     }
 
 
@@ -54,8 +56,9 @@ type BackendMsg
     | RenewSession UserId SessionId ClientId Time.Posix
     | DiscussionCreated Time.Posix (Maybe UserFull) ClientId { title : String, description : String, body : String, tags : List String }
     | DiscussionCommentCreated Time.Posix (Maybe UserFull) ClientId Slug { body : String }
-    | NoOpBackendMsg
+    | GotSeed Seed
     | DayPassed
+    | NoOpBackendMsg
 
 
 type ToFrontend

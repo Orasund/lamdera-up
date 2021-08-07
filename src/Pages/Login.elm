@@ -4,6 +4,7 @@ import Bridge exposing (..)
 import Data.Response exposing (Response)
 import Data.User exposing (User)
 import Effect exposing (Effect)
+import Frontend.KeyPressed as KeyPressed
 import Gen.Route as Route exposing (Route)
 import Page
 import Request exposing (Request)
@@ -59,6 +60,7 @@ type Msg
     | AttemptedSignIn
     | GotUser (Response User)
     | RequestedRouteChange Route
+    | NoOp
 
 
 type Field
@@ -108,10 +110,16 @@ update req msg model =
         RequestedRouteChange route ->
             ( model, Shared.RequestedRouteChange route |> Effect.fromShared )
 
+        NoOp ->
+            ( model, Effect.none )
+
 
 subscriptions : Model -> Sub Msg
 subscriptions _ =
-    Sub.none
+    KeyPressed.submitOnKeyDown
+        { noOp = NoOp
+        , submitted = AttemptedSignIn
+        }
 
 
 

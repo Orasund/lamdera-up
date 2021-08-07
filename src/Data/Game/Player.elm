@@ -29,7 +29,7 @@ idsOrderedByPoints : Dict Int Player -> List (Pointer Player)
 idsOrderedByPoints player =
     player
         |> Dict.toList
-        |> List.sortBy (\( k, v ) -> v.points)
+        |> List.sortBy (\( _, v ) -> v.points)
         |> List.map (Tuple.first >> Pointer.fromInt)
 
 

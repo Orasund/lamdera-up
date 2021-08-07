@@ -23,6 +23,7 @@ import Pages.Login
 import Pages.Profile.Id_
 import Pages.Register
 import Pages.Settings
+import Random
 import Task
 import Time
 import Time.Extra as Time
@@ -50,8 +51,10 @@ init =
       , comments = Dict.empty
       , game = Game.init
       , daysPassed = 0
+      , seed = Random.initialSeed 42
       }
-    , Cmd.none
+    , Random.independentSeed
+        |> Random.generate GotSeed
     )
 
 
@@ -141,11 +144,21 @@ update msg model =
         NoOpBackendMsg ->
             ( model, Cmd.none )
 
+        GotSeed seed ->
+            ( { model | seed = seed }, Cmd.none )
+
         DayPassed ->
+            let
+                ( game, seed ) =
+                    Random.step
+                        (model.game
+                            |> Game.triggerEvent (Game.DayPassed (model.daysPassed + 1))
+                        )
+                        model.seed
+            in
             ( { model
-                | game =
-                    model.game
-                        |> Game.triggerEvent (Game.DayPassed (model.daysPassed + 1))
+                | game = game
+                , seed = seed
                 , daysPassed = model.daysPassed + 1
               }
             , Cmd.none
@@ -194,14 +207,20 @@ updateFromFrontend sessionId clientId msg model =
                 |> Maybe.map
                     (\userFull ->
                         let
-                            game =
-                                model.game
-                                    |> Game.spendToken
-                                        { rule = rule
-                                        , current = userFull.player
-                                        }
+                            ( game, seed ) =
+                                Random.step
+                                    (model.game
+                                        |> Game.spendToken
+                                            { rule = rule
+                                            , current = userFull.player
+                                            }
+                                    )
+                                    model.seed
                         in
-                        ( { model | game = game }
+                        ( { model
+                            | game = game
+                            , seed = seed
+                          }
                         , game
                             |> Observer.updatedGame { userFull = userFull, clientId = clientId }
                         )

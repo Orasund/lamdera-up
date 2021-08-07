@@ -9,11 +9,12 @@ module Data.Game exposing
     , triggerEvent
     )
 
-import Array
+import Data.Game.IntExp as IntExp exposing (IntExp(..))
 import Data.Game.Player as Player exposing (Player, PlayerId)
 import Data.Game.Pointer as Pointer exposing (Pointer)
 import Dict exposing (Dict)
 import List.Extra as List
+import Random exposing (Generator)
 
 
 type alias Game =
@@ -31,8 +32,8 @@ type Trigger
 
 
 type Command
-    = AddPoints Int PlayerId
-    | AddTokens Int PlayerId
+    = AddPoints IntExp PlayerId
+    | AddTokens IntExp PlayerId
     | SwapPointsWith PlayerId PlayerId
     | Win PlayerId
 
@@ -57,17 +58,22 @@ init =
         [ { id = 1
           , trigger = EveryDay
           , description = "You get a token"
-          , commands = [ AddTokens 1 Player.Current ]
+          , commands = [ AddTokens (IntValue 1) Player.Current ]
           }
         , { id = 2
           , trigger = TokenSpend 1
-          , description = "You get a point"
-          , commands = [ AddPoints 1 Player.Current ]
+          , description = "You get a random amount of points"
+          , commands = [ AddPoints (IntRandom (IntValue 1) (IntValue 6)) Player.Current ]
           }
         , { id = 3
           , trigger = EveryWeek 4
           , description = "The player with the highest points wins"
           , commands = [ Win Player.Highest ]
+          }
+        , { id = 4
+          , trigger = TokenSpend 1
+          , description = "You swap your points with the next highest player"
+          , commands = [ SwapPointsWith (Player.Relative 1) Player.Current ]
           }
         ]
     , hasWon = Nothing
@@ -85,7 +91,7 @@ addPlayer player game =
     )
 
 
-spendToken : { rule : Pointer Rule, current : Pointer Player } -> Game -> Game
+spendToken : { rule : Pointer Rule, current : Pointer Player } -> Game -> Generator Game
 spendToken args game =
     case game.rules |> Pointer.find .id args.rule |> Maybe.map .trigger of
         Just (TokenSpend amount) ->
@@ -116,13 +122,13 @@ spendToken args game =
                                     }
                                 )
                     )
-                |> Maybe.withDefault game
+                |> Maybe.withDefault (Random.constant game)
 
         _ ->
-            game
+            Random.constant game
 
 
-triggerEvent : Event -> Game -> Game
+triggerEvent : Event -> Game -> Generator Game
 triggerEvent event g1 =
     g1.rules
         |> filterRule event
@@ -130,22 +136,26 @@ triggerEvent event g1 =
             (\{ commands } g2 ->
                 commands
                     |> List.foldl
-                        (\command g3 ->
-                            g3
-                                |> getCurrent event
-                                |> List.foldl
-                                    (\current g4 ->
-                                        applyCommand
-                                            { command = command
-                                            , current = current
-                                            }
-                                            g4
-                                    )
+                        (\command ->
+                            Random.andThen
+                                (\g3 ->
                                     g3
+                                        |> getCurrent event
+                                        |> List.foldl
+                                            (\current ->
+                                                Random.andThen
+                                                    (applyCommand
+                                                        { command = command
+                                                        , current = current
+                                                        }
+                                                    )
+                                            )
+                                            (Random.constant g3)
+                                )
                         )
                         g2
             )
-            g1
+            (Random.constant g1)
 
 
 filterRule : Event -> List Rule -> List Rule
@@ -194,7 +204,7 @@ getCurrent trigger game =
                 |> Player.idsOrderedByPoints
 
 
-applyCommand : { command : Command, current : Pointer Player } -> Game -> Game
+applyCommand : { command : Command, current : Pointer Player } -> Game -> Generator Game
 applyCommand args game =
     let
         playerIdsOrderedByPoints =
@@ -205,7 +215,7 @@ applyCommand args game =
                 |> Player.getPointer { playerId = playerId, current = args.current }
     in
     if game.hasWon /= Nothing then
-        game
+        Random.constant game
 
     else
         case args.command of
@@ -213,27 +223,39 @@ applyCommand args game =
                 getPlayerId playerId
                     |> Maybe.map
                         (\pointer ->
-                            mapPlayer
-                                (\player ->
-                                    { player | points = player.points + amount }
-                                )
-                                pointer
-                                game
+                            IntExp.evaluate amount
+                                |> Random.map
+                                    (\int ->
+                                        mapPlayer
+                                            (\player ->
+                                                { player
+                                                    | points = player.points + int
+                                                }
+                                            )
+                                            pointer
+                                            game
+                                    )
                         )
-                    |> Maybe.withDefault game
+                    |> Maybe.withDefault (Random.constant game)
 
             AddTokens amount playerId ->
                 getPlayerId playerId
                     |> Maybe.map
                         (\pointer ->
-                            mapPlayer
-                                (\player ->
-                                    { player | tokens = player.points + amount }
-                                )
-                                pointer
-                                game
+                            IntExp.evaluate amount
+                                |> Random.map
+                                    (\int ->
+                                        mapPlayer
+                                            (\player ->
+                                                { player
+                                                    | tokens = player.points + int
+                                                }
+                                            )
+                                            pointer
+                                            game
+                                    )
                         )
-                    |> Maybe.withDefault game
+                    |> Maybe.withDefault (Random.constant game)
 
             SwapPointsWith pId1 pId2 ->
                 let
@@ -268,9 +290,11 @@ applyCommand args game =
                     pointer1
                     pointer2
                     |> Maybe.withDefault game
+                    |> Random.constant
 
             Win playerId ->
                 { game | hasWon = getPlayerId playerId }
+                    |> Random.constant
 
 
 mapPlayer : (Player -> Player) -> Pointer Player -> Game -> Game
