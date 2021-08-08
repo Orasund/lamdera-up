@@ -11,10 +11,8 @@ import Effect exposing (Effect)
 import Element exposing (Element)
 import Element.Border as Border
 import Gen.Params.Discussion.Slug_ exposing (Params)
-import Gen.Route as Route exposing (Route)
+import Gen.Route as Route exposing (Route(..))
 import Html exposing (..)
-import Html.Attributes exposing (class)
-import Markdown
 import Page
 import Request
 import Shared
@@ -102,7 +100,6 @@ type Msg
     | ClickedPage Int
     | UpdatedDiscussion (Response Discussion)
     | RequestedRouteChange Route
-    | LoadDiscussion Slug
 
 
 update : Request.With Params -> Msg -> Model -> ( Model, Effect Msg )
@@ -230,9 +227,6 @@ update req msg model =
         RequestedRouteChange route ->
             ( model, Shared.RequestedRouteChange route |> Effect.fromShared )
 
-        LoadDiscussion _ ->
-            ( model, Effect.none )
-
 
 subscriptions : Model -> Sub Msg
 subscriptions _ =
@@ -248,7 +242,42 @@ view shared model =
     case model.discussion of
         Data.Response.Success discussion ->
             { title = discussion.title
-            , body = viewDiscussion shared model discussion
+            , body =
+                [ View.DiscussionList.view
+                    { user = shared.user
+                    , discussionListing = model.listing
+                    , onPageClick = ClickedPage
+                    , onClick =
+                        \slug ->
+                            { slug = slug }
+                                |> Discussion__Slug_
+                                |> RequestedRouteChange
+                    , onNewDiscussion = Route.Editor |> RequestedRouteChange
+                    }
+                , [ [ Element.text discussion.title |> Element.el Typography.h2
+                    , viewDiscussionMeta shared discussion
+                    ]
+                        |> Element.column
+                            [ Element.width <| Element.fill
+                            , Element.spacing Config.View.spacing
+                            ]
+                  , viewCommentSection shared model discussion
+                  ]
+                    |> Element.column
+                        [ Element.width <| Element.maximum Config.View.maxWidth <| Element.fill
+                        , Element.centerX
+                        , Element.padding Config.View.padding
+                        , Element.spacing (2 * Config.View.spacing)
+                        ]
+                    |> Element.el
+                        [ Element.fill |> Element.width
+                        , Element.alignTop
+                        ]
+                ]
+                    |> Element.row
+                        [ Element.width Element.fill
+                        , Element.height Element.fill
+                        ]
             }
 
         _ ->
@@ -257,65 +286,9 @@ view shared model =
             }
 
 
-viewDiscussion : Shared.Model -> Model -> Discussion -> Element Msg
-viewDiscussion shared model discussion =
-    [ View.DiscussionList.view
-        { user = shared.user
-        , discussionListing = model.listing
-        , onPageClick = ClickedPage
-        , onClick = LoadDiscussion
-        , onNewDiscussion = Route.Editor |> RequestedRouteChange
-        }
-    , [ [ Element.text discussion.title |> Element.el Typography.h2
-        , viewDiscussionMeta shared discussion
-        ]
-            |> Element.column
-                [ Element.width <| Element.fill
-                , Element.spacing Config.View.spacing
-                ]
-      , [ div [ class "row discussion-content" ]
-            [ div [ class "col-md-12" ]
-                [ Markdown.toHtml [] discussion.description ]
-            ]
-            |> Element.html
-        , viewCommentSection shared model discussion
-        ]
-            |> Element.column
-                [ Element.width Element.fill ]
-      ]
-        |> Element.column
-            [ Element.width <| Element.maximum Config.View.maxWidth <| Element.fill
-            , Element.centerX
-            , Element.padding Config.View.padding
-            , Element.spacing (2 * Config.View.spacing)
-            , Element.alignTop
-            ]
-    ]
-        |> Element.row
-            [ Element.width Element.fill
-            , Element.height Element.fill
-            ]
-
-
 viewDiscussionMeta : Shared.Model -> Discussion -> Element Msg
 viewDiscussionMeta shared discussion =
-    [ [ [ Element.text "By"
-        , Widget.textButton (Material.textButton Color.palette)
-            { text = discussion.author.username
-            , onPress =
-                Route.Profile__Id_ { id = discussion.author.id |> String.fromInt }
-                    |> RequestedRouteChange
-                    |> Just
-            }
-        ]
-            |> Element.row []
-      , Element.text (Utils.Time.formatDate discussion.createdAt)
-      ]
-        |> Element.row
-            [ Element.width Element.fill
-            , Element.spaceEvenly
-            ]
-    , case shared.user of
+    [ case shared.user of
         Just user ->
             viewControls discussion user
 
@@ -356,11 +329,12 @@ viewCommentSection : Shared.Model -> Model -> Discussion -> Element Msg
 viewCommentSection shared model discussion =
     [ case model.comments of
         Data.Response.Success comments ->
-            List.map (viewComment shared.user discussion) comments
+            comments
+                |> List.map (viewComment shared.user discussion)
                 |> Element.column
                     [ Element.fill
-                        |> Element.maximum Config.View.maxWidth
                         |> Element.width
+                    , Element.spacing Config.View.spacing
                     ]
 
         _ ->
@@ -374,7 +348,7 @@ viewCommentSection shared model discussion =
     ]
         |> Element.column
             [ Element.width Element.fill
-            , Element.spacing Config.View.spacing
+            , Element.spacing Config.View.padding
             ]
 
 
@@ -404,6 +378,15 @@ viewCommentForm model user discussion =
 viewComment : Maybe User -> Discussion -> Comment -> Element Msg
 viewComment currentUser discussion comment =
     let
+        ownComment : Bool
+        ownComment =
+            case currentUser of
+                Just user ->
+                    user.username == comment.author.username
+
+                Nothing ->
+                    False
+
         viewCommentActions : Element Msg
         viewCommentActions =
             case currentUser of
@@ -430,16 +413,41 @@ viewComment currentUser discussion comment =
       , viewCommentActions
       ]
         |> Element.row [ Element.spaceEvenly, Element.width Element.fill ]
-    , Element.text comment.body |> Element.el [ Element.padding Config.View.spacing ]
+    , comment.body
+        |> String.split "\n"
+        |> List.map (Element.text >> List.singleton >> Element.paragraph [])
+        |> Element.column [ Element.paddingXY Config.View.spacing 0 ]
     , Element.text (Utils.Time.formatDate comment.createdAt)
         |> Element.el [ Element.alignRight ]
     ]
         |> Element.column
             (Material.cardAttributes Color.palette
-                ++ [ Element.fill
-                        |> Element.maximum Config.View.maxWidth
-                        |> Element.width
-                   , Border.rounded Config.View.rounded
-                   , Element.centerX
+                ++ [ Border.rounded Config.View.rounded
+                   , Element.width Element.shrink
+                   , if ownComment then
+                        Element.alignRight
+
+                     else
+                        Element.alignLeft
                    ]
             )
+        |> Element.el
+            [ if ownComment then
+                Element.paddingEach
+                    { top = 0
+                    , right = 0
+                    , bottom = 0
+                    , left = Config.View.padding * 2
+                    }
+
+              else
+                Element.paddingEach
+                    { top = 0
+                    , right = Config.View.padding * 2
+                    , bottom = 0
+                    , left = 0
+                    }
+            , Element.fill
+                |> Element.maximum Config.View.maxWidth
+                |> Element.width
+            ]

@@ -8,6 +8,7 @@ import Frontend.KeyPressed as KeyPressed
 import Gen.Route as Route exposing (Route)
 import Page
 import Request exposing (Request)
+import Sha256
 import Shared
 import Utils.Route
 import View exposing (View)
@@ -96,7 +97,7 @@ update req msg model =
                     { params =
                         { username = model.username
                         , email = model.email
-                        , password = model.password
+                        , password = Sha256.sha256 model.password
                         }
                     }
             )

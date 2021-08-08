@@ -167,6 +167,8 @@ view model =
                                 |> Element.fromRgb
                                 |> Background.color
                              , Element.height Element.fill
+                             , Element.width Element.fill
+                             , Element.scrollbarY
                              ]
                                 ++ Typography.body1
                             )

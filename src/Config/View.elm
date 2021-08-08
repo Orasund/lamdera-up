@@ -1,4 +1,4 @@
-module Config.View exposing (maxWidth, padding, rounded, spacing)
+module Config.View exposing (commentWidth, maxWidth, padding, rounded, sheetWidth, spacing)
 
 
 spacing : Int
@@ -19,3 +19,13 @@ rounded =
 maxWidth : Int
 maxWidth =
     1024
+
+
+commentWidth : Int
+commentWidth =
+    512 + 256
+
+
+sheetWidth : Int
+sheetWidth =
+    256

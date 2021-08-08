@@ -8,6 +8,7 @@ import Element exposing (Element)
 import Html exposing (..)
 import View.Color as Color
 import Widget exposing (Item)
+import Widget.Customize as Customize
 import Widget.Material as Material
 
 
@@ -65,7 +66,10 @@ view options =
     , Widget.divider (Material.fullBleedDivider Color.palette)
     ]
         ++ list
-        |> Widget.itemList (Material.sideSheet Color.palette)
+        |> Widget.itemList
+            (Material.sideSheet Color.palette
+                |> Customize.elementColumn [ Element.width <| Element.px Config.View.sheetWidth ]
+            )
 
 
 viewDiscussionPreview :

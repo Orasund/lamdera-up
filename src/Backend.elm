@@ -116,7 +116,7 @@ update msg model =
                         discussion_ =
                             { slug = uniqueSlug model discussion.title 1
                             , title = discussion.title
-                            , description = discussion.description
+                            , description = ""
                             , createdAt = t
                             , updatedAt = t
                             , userId = user.id
@@ -130,7 +130,11 @@ update msg model =
                             model.discussions
                                 |> Dict.insert discussion_.slug discussion_
                       }
-                    , sendToFrontend clientId (PageMsg (Gen.Msg.Editor (Pages.Editor.GotDiscussion res)))
+                    , [ Time.now
+                            |> Task.perform (always (DiscussionCommentCreated t userM clientId discussion_.slug { body = discussion.description }))
+                      , sendToFrontend clientId (PageMsg (Gen.Msg.Editor (Pages.Editor.GotDiscussion res)))
+                      ]
+                        |> Cmd.batch
                     )
 
                 Nothing ->
