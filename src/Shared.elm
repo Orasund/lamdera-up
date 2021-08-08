@@ -8,12 +8,10 @@ module Shared exposing
     , view
     )
 
-import Bridge exposing (..)
+import Bridge exposing (ToBackend(..))
 import Data.User exposing (User)
-import Element exposing (Element)
+import Element
 import Gen.Route exposing (Route)
-import Html exposing (..)
-import Html.Attributes exposing (href, rel)
 import Request exposing (Request)
 import Utils.Route
 import View exposing (View)
@@ -60,7 +58,9 @@ update req msg model =
 
         ClickedSignOut ->
             ( { model | user = Nothing }
-            , model.user |> Maybe.map (\user -> sendToBackend (SignedOut user)) |> Maybe.withDefault Cmd.none
+            , model.user
+                |> Maybe.map (\user -> Bridge.sendToBackend (SignedOut user))
+                |> Maybe.withDefault Cmd.none
             )
 
         RequestedRouteChange route ->
@@ -102,16 +102,3 @@ view req { page, toMsg } model =
                 , Element.height <| Element.fill
                 ]
     }
-
-
-css : List (Element msg)
-css =
-    -- Import Ionicon icons & Google Fonts our Bootstrap theme relies on
-    [ Html.node "link" [ rel "stylesheet", href "//code.ionicframework.com/ionicons/2.0.1/css/ionicons.min.css" ] []
-    , Html.node "link" [ rel "stylesheet", href "//fonts.googleapis.com/css?family=Titillium+Web:700|Source+Serif+Pro:400,700|Merriweather+Sans:400,700|Source+Sans+Pro:400,300,600,700,300italic,400italic,600italic,700italic" ] []
-
-    -- Import the custom Bootstrap 4 theme from our hosted CDN
-    , Html.node "link" [ rel "stylesheet", href "//demo.productionready.io/main.css" ] []
-    , Html.node "link" [ rel "stylesheet", href "/style.css" ] []
-    ]
-        |> List.map Element.html

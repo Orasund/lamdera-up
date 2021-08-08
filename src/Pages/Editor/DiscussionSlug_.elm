@@ -73,8 +73,6 @@ update req msg model =
                             Just <|
                                 { title = a.title
                                 , description = a.description
-                                , body = a.body
-                                , tags = String.join ", " a.tags
                                 }
                       }
                     , Cmd.none
@@ -100,11 +98,6 @@ update req msg model =
                 , updates =
                     { title = form.title
                     , description = form.description
-                    , body = form.body
-                    , tags =
-                        form.tags
-                            |> String.split ","
-                            |> List.map String.trim
                     }
                 }
                 |> sendToBackend

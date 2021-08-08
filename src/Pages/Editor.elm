@@ -39,8 +39,6 @@ init _ =
     ( { form =
             { title = ""
             , description = ""
-            , body = ""
-            , tags = ""
             }
       , discussion = Data.Response.NotAsked
       }
@@ -78,11 +76,6 @@ update req msg model =
                 { discussion =
                     { title = model.form.title
                     , description = model.form.description
-                    , body = model.form.body
-                    , tags =
-                        model.form.tags
-                            |> String.split ","
-                            |> List.map String.trim
                     }
                 }
                 |> sendToBackend

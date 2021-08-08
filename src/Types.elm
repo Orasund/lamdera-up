@@ -54,7 +54,7 @@ type alias ToBackend =
 type BackendMsg
     = CheckSession SessionId ClientId
     | RenewSession UserId SessionId ClientId Time.Posix
-    | DiscussionCreated Time.Posix (Maybe UserFull) ClientId { title : String, description : String, body : String, tags : List String }
+    | DiscussionCreated Time.Posix (Maybe UserFull) ClientId { title : String, description : String }
     | DiscussionCommentCreated Time.Posix (Maybe UserFull) ClientId Slug { body : String }
     | GotSeed Seed
     | DayPassed

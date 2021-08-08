@@ -6,7 +6,6 @@ import Data.Game exposing (Rule)
 import Data.Game.Pointer exposing (Pointer)
 import Data.Profile exposing (Profile)
 import Data.Response exposing (Response)
-import Data.User exposing (User)
 import Effect exposing (Effect)
 import Element exposing (Element)
 import Element.Border as Border
@@ -70,8 +69,6 @@ init _ { params } =
 type Msg
     = GotProfile (Response Profile)
     | GotRules (Response (List Rule))
-    | ClickedFollow User Profile
-    | ClickedUnfollow User Profile
     | TriggeredRule (Pointer Rule)
     | RequestedRouteChange Route
 
@@ -82,24 +79,6 @@ update _ msg model =
         GotProfile profile ->
             ( { model | profile = profile }
             , Effect.none
-            )
-
-        ClickedFollow _ profile ->
-            ( model
-            , ProfileFollow_Profile__Id_
-                { id = profile.id
-                }
-                |> sendToBackend
-                |> Effect.fromCmd
-            )
-
-        ClickedUnfollow _ profile ->
-            ( model
-            , ProfileUnfollow_Profile__Id_
-                { id = profile.id
-                }
-                |> sendToBackend
-                |> Effect.fromCmd
             )
 
         GotRules rules ->

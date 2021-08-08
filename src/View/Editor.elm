@@ -22,15 +22,11 @@ import Widget.Material.Typography as Typography
 type Field
     = Title
     | Description
-    | Body
-    | Tags
 
 
 type alias Form =
     { title : String
     , description : String
-    , body : String
-    , tags : String
     }
 
 
@@ -43,12 +39,6 @@ updateField field value form =
         Description ->
             { form | description = value }
 
-        Body ->
-            { form | body = value }
-
-        Tags ->
-            { form | tags = value }
-
 
 view :
     { onFormSubmit : msg
@@ -56,8 +46,6 @@ view :
     , form :
         { title : String
         , description : String
-        , body : String
-        , tags : String
         }
     , buttonLabel : String
     , onUpdate : Field -> String -> msg

@@ -14,12 +14,8 @@ type alias Discussion =
     { slug : Slug
     , title : String
     , description : String
-    , body : String
-    , tags : List String
     , createdAt : Time.Posix
     , updatedAt : Time.Posix
-    , favorited : Bool
-    , favoritesCount : Int
     , author : Profile
     }
 
@@ -28,8 +24,6 @@ type alias DiscussionStore =
     { slug : Slug
     , title : String
     , description : String
-    , body : String
-    , tags : List String
     , createdAt : Time.Posix
     , updatedAt : Time.Posix
     , userId : Int

@@ -6,8 +6,6 @@ import Data.Response exposing (Response)
 import Data.User exposing (User)
 import Element exposing (Element)
 import Html exposing (..)
-import Html.Attributes exposing (class, classList)
-import Html.Events as Events
 import View.Color as Color
 import Widget exposing (Item)
 import Widget.Material as Material
@@ -16,8 +14,6 @@ import Widget.Material as Material
 view :
     { user : Maybe User
     , discussionListing : Response Data.Discussion.Listing
-    , onFavorite : User -> Discussion -> msg
-    , onUnfavorite : User -> Discussion -> msg
     , onPageClick : Int -> msg
     , onClick : Slug -> msg
     , onNewDiscussion : msg

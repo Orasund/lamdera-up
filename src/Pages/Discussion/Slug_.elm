@@ -4,7 +4,6 @@ import Bridge exposing (..)
 import Config.View
 import Data.Discussion exposing (Discussion, Slug)
 import Data.Discussion.Comment exposing (Comment)
-import Data.Discussion.Filters as Filters
 import Data.Profile exposing (Profile)
 import Data.Response exposing (Response)
 import Data.User exposing (User)
@@ -54,7 +53,7 @@ type alias Model =
 
 
 init : Shared.Model -> Request.With Params -> ( Model, Effect Msg )
-init shared { params } =
+init _ { params } =
     let
         model : Model
         model =
@@ -76,8 +75,7 @@ init shared { params } =
             }
             |> sendToBackend
         , DiscussionList_Discussion__Slug_
-            { filters = Filters.create
-            , page = model.page
+            { page = model.page
             }
             |> sendToBackend
         ]
@@ -91,13 +89,9 @@ init shared { params } =
 
 type Msg
     = GotDiscussion (Response Discussion)
-    | ClickedFavorite User Discussion
-    | ClickedUnfavorite User Discussion
     | ClickedDeleteDiscussion User Discussion
     | DeletedDiscussion (Response Discussion)
     | GotAuthor (Response Profile)
-    | ClickedFollow User Profile
-    | ClickedUnfollow User Profile
     | GotComments (Response (List Comment))
     | ClickedDeleteComment User Discussion Comment
     | DeletedComment (Response Int)
@@ -119,25 +113,7 @@ update req msg model =
             , Effect.none
             )
 
-        ClickedFavorite user discussion ->
-            ( model
-            , DiscussionFavorite_Discussion__Slug_
-                { slug = discussion.slug
-                }
-                |> sendToBackend
-                |> Effect.fromCmd
-            )
-
-        ClickedUnfavorite user discussion ->
-            ( model
-            , DiscussionUnfavorite_Discussion__Slug_
-                { slug = discussion.slug
-                }
-                |> sendToBackend
-                |> Effect.fromCmd
-            )
-
-        ClickedDeleteDiscussion user discussion ->
+        ClickedDeleteDiscussion _ discussion ->
             ( model
             , DiscussionDelete_Discussion__Slug_
                 { slug = discussion.slug
@@ -167,20 +143,6 @@ update req msg model =
             , Effect.none
             )
 
-        ClickedFollow user profile ->
-            ( model
-            , ProfileFollow_Discussion__Slug_ { id = profile.id }
-                |> sendToBackend
-                |> Effect.fromCmd
-            )
-
-        ClickedUnfollow user profile ->
-            ( model
-            , ProfileUnfollow_Discussion__Slug_ { id = profile.id }
-                |> sendToBackend
-                |> Effect.fromCmd
-            )
-
         GotComments comments ->
             ( { model | comments = comments }
             , Effect.none
@@ -191,7 +153,7 @@ update req msg model =
             , Effect.none
             )
 
-        SubmittedCommentForm user discussion ->
+        SubmittedCommentForm _ discussion ->
             if String.isEmpty model.commentText then
                 ( model, Effect.none )
 
@@ -215,7 +177,7 @@ update req msg model =
             , Effect.none
             )
 
-        ClickedDeleteComment user discussion comment ->
+        ClickedDeleteComment _ discussion comment ->
             ( model
             , DiscussionCommentDelete_Discussion__Slug_
                 { discussionSlug = discussion.slug
@@ -300,8 +262,6 @@ viewDiscussion shared model discussion =
     [ View.DiscussionList.view
         { user = shared.user
         , discussionListing = model.listing
-        , onFavorite = ClickedFavorite
-        , onUnfavorite = ClickedUnfavorite
         , onPageClick = ClickedPage
         , onClick = LoadDiscussion
         , onNewDiscussion = Route.Editor |> RequestedRouteChange
@@ -315,7 +275,7 @@ viewDiscussion shared model discussion =
                 ]
       , [ div [ class "row discussion-content" ]
             [ div [ class "col-md-12" ]
-                [ Markdown.toHtml [] discussion.body ]
+                [ Markdown.toHtml [] discussion.description ]
             ]
             |> Element.html
         , viewCommentSection shared model discussion

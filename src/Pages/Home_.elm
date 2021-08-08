@@ -2,7 +2,6 @@ module Pages.Home_ exposing (Model, Msg(..), page)
 
 import Bridge exposing (..)
 import Data.Discussion exposing (Discussion)
-import Data.Discussion.Filters as Filters
 import Data.Response exposing (Response)
 import Data.User exposing (User)
 import Effect exposing (Effect)
@@ -34,70 +33,25 @@ page shared _ =
 type alias Model =
     { listing : Response Data.Discussion.Listing
     , page : Int
-    , tags : Response (List Tag)
-    , activeTab : Tab
     }
-
-
-type Tab
-    = FeedFor User
-    | Global
-    | TagFilter Tag
 
 
 init : Shared.Model -> ( Model, Effect Msg )
 init shared =
     let
-        activeTab : Tab
-        activeTab =
-            Global
-
         model : Model
         model =
             { listing = Data.Response.Loading
             , page = 1
-            , tags = Data.Response.Loading
-            , activeTab = activeTab
             }
     in
     ( model
-    , Cmd.batch
-        [ fetchDiscussionsForTab shared model
-        , GetTags_Home_ |> sendToBackend
-        ]
+    , DiscussionList_Home_
+        { page = model.page
+        }
+        |> sendToBackend
         |> Effect.fromCmd
     )
-
-
-fetchDiscussionsForTab :
-    Shared.Model
-    ->
-        { model
-            | page : Int
-            , activeTab : Tab
-        }
-    -> Cmd Msg
-fetchDiscussionsForTab _ model =
-    case model.activeTab of
-        Global ->
-            DiscussionList_Home_
-                { filters = Filters.create
-                , page = model.page
-                }
-                |> sendToBackend
-
-        FeedFor _ ->
-            DiscussionFeed_Home_
-                { page = model.page
-                }
-                |> sendToBackend
-
-        TagFilter tag ->
-            DiscussionList_Home_
-                { filters = Filters.create |> Filters.withTag tag
-                , page = model.page
-                }
-                |> sendToBackend
 
 
 
@@ -106,10 +60,6 @@ fetchDiscussionsForTab _ model =
 
 type Msg
     = GotDiscussions (Response Data.Discussion.Listing)
-    | GotTags (Response (List Tag))
-    | SelectedTab Tab
-    | ClickedFavorite User Discussion
-    | ClickedUnfavorite User Discussion
     | ClickedPage Int
     | UpdatedDiscussion (Response Discussion)
     | RequestedRouteChange Route
@@ -127,43 +77,6 @@ update shared msg model =
             , Effect.none
             )
 
-        GotTags tags ->
-            ( { model | tags = tags }
-            , Effect.none
-            )
-
-        SelectedTab tab ->
-            let
-                newModel : Model
-                newModel =
-                    { model
-                        | activeTab = tab
-                        , listing = Data.Response.Loading
-                        , page = 1
-                    }
-            in
-            ( newModel
-            , fetchDiscussionsForTab shared newModel |> Effect.fromCmd
-            )
-
-        ClickedFavorite _ discussion ->
-            ( model
-            , DiscussionFavorite_Home_
-                { slug = discussion.slug
-                }
-                |> sendToBackend
-                |> Effect.fromCmd
-            )
-
-        ClickedUnfavorite _ discussion ->
-            ( model
-            , DiscussionUnfavorite_Home_
-                { slug = discussion.slug
-                }
-                |> sendToBackend
-                |> Effect.fromCmd
-            )
-
         ClickedPage page_ ->
             let
                 newModel : Model
@@ -174,8 +87,7 @@ update shared msg model =
                     }
             in
             ( newModel
-            , fetchDiscussionsForTab shared newModel
-                |> Effect.fromCmd
+            , Effect.none
             )
 
         UpdatedDiscussion (Data.Response.Success discussion) ->
@@ -210,8 +122,6 @@ view shared model =
         [ View.DiscussionList.view
             { user = shared.user
             , discussionListing = model.listing
-            , onFavorite = ClickedFavorite
-            , onUnfavorite = ClickedUnfavorite
             , onPageClick = ClickedPage
             , onClick =
                 \slug ->
