@@ -48,9 +48,7 @@ view options =
                 |> Just
     in
     Widget.tabBar (Material.tabBar Color.palette)
-        { title =
-            Element.text "Conduit"
-                |> Element.el Typography.h6
+        { title = Element.none
         , menu =
             { selected = selected
             , options =

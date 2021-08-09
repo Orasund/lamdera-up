@@ -10,7 +10,5 @@ formatDate =
         [ DF.monthNameFull
         , DF.text " "
         , DF.dayOfMonthNumber
-        , DF.text ", "
-        , DF.yearNumber
         ]
         Time.utc

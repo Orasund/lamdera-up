@@ -330,6 +330,7 @@ viewCommentSection shared model discussion =
     [ case model.comments of
         Data.Response.Success comments ->
             comments
+                |> List.reverse
                 |> List.map (viewComment shared.user discussion)
                 |> Element.column
                     [ Element.fill
@@ -357,19 +358,21 @@ viewCommentForm model user discussion =
     [ View.Input.multiLineInput
         { onChange = UpdatedCommentText
         , text = model.commentText
-        , label = "Write a comment..."
+        , label = "Reply..."
         }
     , Widget.textButton (Material.containedButton Color.palette)
-        { text = "Post Comment"
+        { text = "Reply"
         , onPress = Just <| SubmittedCommentForm user discussion
         }
-        |> Element.el [ Element.alignRight, Element.width Element.fill ]
+        |> Element.el [ Element.alignRight ]
     ]
         |> Element.column
             (Material.cardAttributes Color.palette
                 ++ [ Element.fill
                         |> Element.maximum Config.View.maxWidth
                         |> Element.width
+                   , Element.spacing Config.View.spacing
+                   , Border.rounded Config.View.rounded
                    , Element.centerX
                    ]
             )
@@ -412,7 +415,10 @@ viewComment currentUser discussion comment =
             }
       , viewCommentActions
       ]
-        |> Element.row [ Element.spaceEvenly, Element.width Element.fill ]
+        |> Element.row
+            [ Element.spaceEvenly
+            , Element.width Element.fill
+            ]
     , comment.body
         |> String.split "\n"
         |> List.map (Element.text >> List.singleton >> Element.paragraph [])
@@ -423,6 +429,7 @@ viewComment currentUser discussion comment =
         |> Element.column
             (Material.cardAttributes Color.palette
                 ++ [ Border.rounded Config.View.rounded
+                   , Element.spacing Config.View.spacing
                    , Element.width Element.shrink
                    , if ownComment then
                         Element.alignRight

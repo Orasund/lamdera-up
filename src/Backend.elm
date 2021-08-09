@@ -22,6 +22,7 @@ import Pages.Profile.Id_
 import Pages.Register
 import Pages.Settings
 import Random
+import Sha256
 import Task
 import Time
 import Time.Extra as Time
@@ -51,11 +52,11 @@ init =
       , daysPassed = 0
       , seed = Random.initialSeed 42
       }
-        |> addPlayer { email = "bot1@bot.com", username = "Bot1", password = "bot" }
+        |> addPlayer { email = "bot1@bot.com", username = "Bot1", password = Sha256.sha256 "bot" }
         |> Tuple.first
-        |> addPlayer { email = "bot2@bot.com", username = "Bot2", password = "bot" }
+        |> addPlayer { email = "bot2@bot.com", username = "Bot2", password = Sha256.sha256 "bot" }
         |> Tuple.first
-        |> addPlayer { email = "bot3@bot.com", username = "Bot3", password = "bot" }
+        |> addPlayer { email = "bot3@bot.com", username = "Bot3", password = Sha256.sha256 "bot" }
         |> Tuple.first
     , Random.independentSeed
         |> Random.generate GotSeed
@@ -235,7 +236,7 @@ updateFromFrontend sessionId clientId msg model =
         SignedOut _ ->
             ( { model | sessions = model.sessions |> Dict.remove sessionId }, Cmd.none )
 
-        SpendToken rule ->
+        SpendToken { rule, amountSpent } ->
             model
                 |> getSessionUser sessionId
                 |> Maybe.map
@@ -247,6 +248,7 @@ updateFromFrontend sessionId clientId msg model =
                                         |> Game.spendToken
                                             { rule = rule
                                             , current = userFull.player
+                                            , amountSpent = amountSpent
                                             }
                                     )
                                     model.seed

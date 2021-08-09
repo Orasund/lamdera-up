@@ -26,7 +26,8 @@ type alias Game =
 
 
 type Trigger
-    = TokenSpend Int
+    = TokensSpend Int
+    | SomeTokensSpend
     | EveryWeek Int
     | EveryDay
 
@@ -47,7 +48,7 @@ type alias Rule =
 
 
 type Event
-    = RuleBought { current : Pointer Player, rule : Pointer Rule }
+    = RuleBought { current : Pointer Player, rule : Pointer Rule, amountSpent : Int }
     | DayPassed Int
 
 
@@ -61,7 +62,7 @@ init =
           , commands = [ AddTokens (IntValue 1) Player.Current ]
           }
         , { id = 2
-          , trigger = TokenSpend 1
+          , trigger = TokensSpend 1
           , description = "You get a random amount of points"
           , commands = [ AddPoints (IntRandom (IntValue 1) (IntValue 6)) Player.Current ]
           }
@@ -71,8 +72,8 @@ init =
           , commands = [ Win Player.Highest ]
           }
         , { id = 4
-          , trigger = TokenSpend 1
-          , description = "You swap your points with the next highest player"
+          , trigger = SomeTokensSpend
+          , description = "You swap your points with the next N-th highest player, where N is the amount of tokens you spend"
           , commands = [ SwapPointsWith (Player.Relative 1) Player.Current ]
           }
         ]
@@ -91,45 +92,66 @@ addPlayer player game =
     )
 
 
-spendToken : { rule : Pointer Rule, current : Pointer Player } -> Game -> Generator Game
+spendToken : { rule : Pointer Rule, current : Pointer Player, amountSpent : Int } -> Game -> Generator Game
 spendToken args game =
-    case game.rules |> Pointer.find .id args.rule |> Maybe.map .trigger of
-        Just (TokenSpend amount) ->
-            (game.players |> Pointer.get args.current)
-                |> Maybe.andThen
-                    (\player ->
-                        let
-                            tokens =
-                                player.tokens - amount
-                        in
-                        if tokens >= 0 then
-                            Just { player | tokens = tokens }
+    let
+        isValid =
+            case game.rules |> Pointer.find .id args.rule |> Maybe.map .trigger of
+                Just (TokensSpend _) ->
+                    True
 
-                        else
-                            Nothing
-                    )
-                |> Maybe.map
-                    (\player ->
-                        { game
-                            | players =
-                                game.players
-                                    |> Pointer.update args.current (Maybe.map (always player))
-                        }
-                            |> triggerEvent
-                                (RuleBought
-                                    { current = args.current
-                                    , rule = args.rule
-                                    }
-                                )
-                    )
-                |> Maybe.withDefault (Random.constant game)
+                Just SomeTokensSpend ->
+                    True
 
-        _ ->
-            Random.constant game
+                _ ->
+                    False
+    in
+    if isValid then
+        (game.players |> Pointer.get args.current)
+            |> Maybe.andThen
+                (\player ->
+                    let
+                        tokens =
+                            player.tokens - args.amountSpent
+                    in
+                    if tokens >= 0 then
+                        Just { player | tokens = tokens }
+
+                    else
+                        Nothing
+                )
+            |> Maybe.map
+                (\player ->
+                    { game
+                        | players =
+                            game.players
+                                |> Pointer.update args.current (Maybe.map (always player))
+                    }
+                        |> triggerEvent
+                            (RuleBought
+                                { current = args.current
+                                , rule = args.rule
+                                , amountSpent = args.amountSpent
+                                }
+                            )
+                )
+            |> Maybe.withDefault (Random.constant game)
+
+    else
+        Random.constant game
 
 
 triggerEvent : Event -> Game -> Generator Game
 triggerEvent event g1 =
+    let
+        amountSpent =
+            case event of
+                RuleBought a ->
+                    a.amountSpent
+
+                _ ->
+                    0
+    in
     g1.rules
         |> filterRule event
         |> List.foldl
@@ -147,6 +169,7 @@ triggerEvent event g1 =
                                                     (applyCommand
                                                         { command = command
                                                         , current = current
+                                                        , amountSpent = amountSpent
                                                         }
                                                     )
                                             )
@@ -166,7 +189,10 @@ filterRule event =
                 >> Maybe.andThen
                     (\r ->
                         case r.trigger of
-                            TokenSpend _ ->
+                            TokensSpend _ ->
+                                r |> List.singleton |> Just
+
+                            SomeTokensSpend ->
                                 r |> List.singleton |> Just
 
                             _ ->
@@ -204,7 +230,7 @@ getCurrent trigger game =
                 |> Player.idsOrderedByPoints
 
 
-applyCommand : { command : Command, current : Pointer Player } -> Game -> Generator Game
+applyCommand : { command : Command, current : Pointer Player, amountSpent : Int } -> Game -> Generator Game
 applyCommand args game =
     let
         playerIdsOrderedByPoints =
@@ -223,7 +249,7 @@ applyCommand args game =
                 getPlayerId playerId
                     |> Maybe.map
                         (\pointer ->
-                            IntExp.evaluate amount
+                            IntExp.evaluate amount args.amountSpent
                                 |> Random.map
                                     (\int ->
                                         mapPlayer
@@ -242,7 +268,7 @@ applyCommand args game =
                 getPlayerId playerId
                     |> Maybe.map
                         (\pointer ->
-                            IntExp.evaluate amount
+                            IntExp.evaluate amount args.amountSpent
                                 |> Random.map
                                     (\int ->
                                         mapPlayer

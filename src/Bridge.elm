@@ -12,7 +12,7 @@ sendToBackend =
 
 type ToBackend
     = SignedOut User
-    | SpendToken (Pointer Rule)
+    | SpendToken { rule : Pointer Rule, amountSpent : Int }
       -- Req/resp paired messages
     | DiscussionList_Home_ { page : Int }
     | DiscussionFeed_Home_ { page : Int }

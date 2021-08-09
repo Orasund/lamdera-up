@@ -9,6 +9,7 @@ import Data.Response exposing (Response)
 import Effect exposing (Effect)
 import Element exposing (Element)
 import Element.Border as Border
+import Element.Input as Input
 import Gen.Params.Profile.Id_ exposing (Params)
 import Gen.Route exposing (Route)
 import Html exposing (..)
@@ -41,6 +42,7 @@ type alias Model =
     { id : Int
     , profile : Response Profile
     , rules : Response (List Rule)
+    , amountToSpend : String
     }
 
 
@@ -53,6 +55,7 @@ init _ { params } =
     ( { id = id
       , profile = Data.Response.Loading
       , rules = Data.Response.Loading
+      , amountToSpend = "1"
       }
     , Cmd.batch
         [ ProfileGet_Profile__Id_ { id = id } |> sendToBackend
@@ -69,7 +72,8 @@ init _ { params } =
 type Msg
     = GotProfile (Response Profile)
     | GotRules (Response (List Rule))
-    | TriggeredRule (Pointer Rule)
+    | TriggeredRule { rule : Pointer Rule, amountSpent : Int }
+    | AmountChanged String
     | RequestedRouteChange Route
 
 
@@ -86,12 +90,15 @@ update _ msg model =
             , Effect.none
             )
 
-        TriggeredRule rule ->
+        TriggeredRule args ->
             ( model
-            , SpendToken rule
+            , SpendToken args
                 |> sendToBackend
                 |> Effect.fromCmd
             )
+
+        AmountChanged string ->
+            ( { model | amountToSpend = string }, Effect.none )
 
         RequestedRouteChange route ->
             ( model, Shared.RequestedRouteChange route |> Effect.fromShared )
@@ -155,11 +162,33 @@ viewProfile shared profile model =
             [ Element.spacing Config.View.spacing
             ]
     , if isViewingOwnProfile then
-        ((Element.text "Actions" |> Element.el Typography.h4)
+        (([ Element.text "Actions" |> Element.el Typography.h4
+          , [ Element.text "Spend "
+            , Input.text
+                (Material.textInputAttributes Color.palette
+                    ++ [ Element.width <| Element.px 64 ]
+                )
+                { text = model.amountToSpend
+                , placeholder = Nothing
+                , label = "Amount to spend" |> Input.labelHidden
+                , onChange = AmountChanged
+                }
+            , Element.text " Token(s)"
+            ]
+                |> Element.row [ Element.width Element.shrink ]
+          ]
+            |> Element.row [ Element.spaceEvenly, Element.width Element.fill ]
+         )
             :: (rules
                     |> List.map
                         (Rule.view
-                            { msgMapper = TriggeredRule, tokens = tokens }
+                            { triggerRule = TriggeredRule
+                            , amountSpent =
+                                model.amountToSpend
+                                    |> String.toInt
+                                    |> Maybe.withDefault 0
+                            , tokens = tokens
+                            }
                         )
                )
         )

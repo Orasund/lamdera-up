@@ -47,7 +47,7 @@ multiLineInput args =
         (Material.textInputAttributes Color.palette
             ++ [ Element.width Element.fill
                , Element.padding 16
-               , Element.height <| Element.px 256
+               , Element.height <| Element.px 128
                ]
         )
         { onChange = args.onChange
@@ -56,8 +56,6 @@ multiLineInput args =
             Element.text args.label
                 |> Input.placeholder []
                 |> Just
-        , label =
-            args.label
-                |> Input.labelHidden
+        , label = args.label |> Input.labelHidden
         , spellcheck = True
         }

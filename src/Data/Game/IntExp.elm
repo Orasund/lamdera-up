@@ -6,10 +6,11 @@ import Random exposing (Generator)
 type IntExp
     = IntValue Int
     | IntRandom IntExp IntExp
+    | IntVar
 
 
-evaluate : IntExp -> Generator Int
-evaluate int =
+evaluate : IntExp -> Int -> Generator Int
+evaluate int var =
     case int of
         IntValue i ->
             Random.constant i
@@ -17,6 +18,9 @@ evaluate int =
         IntRandom min max ->
             Random.map2
                 Tuple.pair
-                (evaluate min)
-                (evaluate max)
+                (evaluate min var)
+                (evaluate max var)
                 |> Random.andThen (\( a, b ) -> Random.int a b)
+
+        IntVar ->
+            Random.constant var

@@ -9,17 +9,37 @@ import Widget
 import Widget.Material as Material
 
 
-view : { msgMapper : Pointer Rule -> msg, tokens : Int } -> Rule -> Element msg
+view :
+    { triggerRule : { rule : Pointer Rule, amountSpent : Int } -> msg
+    , amountSpent : Int
+    , tokens : Int
+    }
+    -> Rule
+    -> Element msg
 view args rule =
-    case rule.trigger of
-        TokenSpend amount ->
-            [ Element.text rule.description
-            , [ Element.text <| "Costs " ++ String.fromInt amount ++ " Token(s)"
+    let
+        fun amount string =
+            [ rule.description
+                |> Element.text
+                |> List.singleton
+                |> Element.paragraph
+                    [ Element.paddingEach
+                        { top = 0
+                        , right = Config.View.spacing
+                        , bottom = 0
+                        , left = 0
+                        }
+                    ]
+            , [ Element.text <| string
               , Widget.textButton (Material.containedButton Color.palette)
                     { text = "Trigger"
                     , onPress =
-                        if args.tokens >= amount then
-                            rule.id |> Pointer.fromInt |> args.msgMapper |> Just
+                        if (args.tokens >= amount) && (args.amountSpent >= amount) then
+                            { rule = rule.id |> Pointer.fromInt
+                            , amountSpent = amount
+                            }
+                                |> args.triggerRule
+                                |> Just
 
                         else
                             Nothing
@@ -31,6 +51,13 @@ view args rule =
                     [ Element.spaceEvenly
                     , Element.width Element.fill
                     ]
+    in
+    case rule.trigger of
+        TokensSpend amount ->
+            fun amount ("Costs " ++ String.fromInt amount ++ " Token(s)")
+
+        SomeTokensSpend ->
+            fun args.amountSpent ("Spend  " ++ String.fromInt args.amountSpent ++ " Token(s)")
 
         _ ->
             Element.none
