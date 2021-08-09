@@ -184,7 +184,7 @@ update msg model =
 
         DayPassed ->
             let
-                ( game, seed ) =
+                ( result, seed ) =
                     Random.step
                         (model.game
                             |> Game.triggerEvent (Game.DayPassed (model.daysPassed + 1))
@@ -192,10 +192,17 @@ update msg model =
                         model.seed
             in
             ( { model
-                | game = game
-                , seed = seed
+                | seed = seed
                 , daysPassed = model.daysPassed + 1
               }
+                |> (\m ->
+                        case result of
+                            Ok g ->
+                                { m | game = g }
+
+                            Err _ ->
+                                m
+                   )
             , Cmd.none
             )
 
@@ -242,7 +249,7 @@ updateFromFrontend sessionId clientId msg model =
                 |> Maybe.map
                     (\userFull ->
                         let
-                            ( game, seed ) =
+                            ( result, seed ) =
                                 Random.step
                                     (model.game
                                         |> Game.spendToken
@@ -253,13 +260,22 @@ updateFromFrontend sessionId clientId msg model =
                                     )
                                     model.seed
                         in
-                        ( { model
-                            | game = game
-                            , seed = seed
-                          }
-                        , game
-                            |> Observer.updatedGame { userFull = userFull, clientId = clientId }
-                        )
+                        { model
+                            | seed = seed
+                        }
+                            |> (\m ->
+                                    case result of
+                                        Ok game ->
+                                            ( { m | game = game }
+                                            , game
+                                                |> Observer.updatedGame { userFull = userFull, clientId = clientId }
+                                            )
+
+                                        Err err ->
+                                            ( m
+                                            , Cmd.none
+                                            )
+                               )
                     )
                 |> Maybe.withDefault ( model, Cmd.none )
 

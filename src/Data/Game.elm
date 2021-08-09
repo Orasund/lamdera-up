@@ -92,7 +92,7 @@ addPlayer player game =
     )
 
 
-spendToken : { rule : Pointer Rule, current : Pointer Player, amountSpent : Int } -> Game -> Generator Game
+spendToken : { rule : Pointer Rule, current : Pointer Player, amountSpent : Int } -> Game -> Generator (Result String Game)
 spendToken args game =
     let
         isValid =
@@ -135,13 +135,13 @@ spendToken args game =
                                 }
                             )
                 )
-            |> Maybe.withDefault (Random.constant game)
+            |> Maybe.withDefault (Random.constant (Ok game))
 
     else
-        Random.constant game
+        Random.constant (Ok game)
 
 
-triggerEvent : Event -> Game -> Generator Game
+triggerEvent : Event -> Game -> Generator (Result String Game)
 triggerEvent event g1 =
     let
         amountSpent =
@@ -151,34 +151,60 @@ triggerEvent event g1 =
 
                 _ ->
                     0
+
+        foldCommands : Game -> List Command -> Generator (Result String Game)
+        foldCommands =
+            foldlList
+                (\command result ->
+                    case result of
+                        Ok g3 ->
+                            g3
+                                |> getCurrent event
+                                |> foldPlayers command g3
+
+                        Err err ->
+                            Random.constant <| Err err
+                )
+
+        foldPlayers : Command -> Game -> List (Pointer Player) -> Generator (Result String Game)
+        foldPlayers command =
+            foldlList
+                (\current ->
+                    Result.andThen
+                        (applyCommand
+                            { command = command
+                            , current = current
+                            , amountSpent = amountSpent
+                            }
+                        )
+                        >> resultRandMap
+                )
+
+        foldlList :
+            (a -> Result String Game -> Generator (Result String Game))
+            -> Game
+            -> List a
+            -> Generator (Result String Game)
+        foldlList fun g =
+            List.foldl
+                (\current ->
+                    Random.andThen (fun current)
+                )
+                (Random.constant <| Ok <| g)
     in
     g1.rules
         |> filterRule event
-        |> List.foldl
-            (\{ commands } g2 ->
-                commands
-                    |> List.foldl
-                        (\command ->
-                            Random.andThen
-                                (\g3 ->
-                                    g3
-                                        |> getCurrent event
-                                        |> List.foldl
-                                            (\current ->
-                                                Random.andThen
-                                                    (applyCommand
-                                                        { command = command
-                                                        , current = current
-                                                        , amountSpent = amountSpent
-                                                        }
-                                                    )
-                                            )
-                                            (Random.constant g3)
-                                )
-                        )
-                        g2
+        |> foldlList
+            (\{ commands } result ->
+                case result of
+                    Ok g2 ->
+                        commands
+                            |> foldCommands g2
+
+                    Err err ->
+                        Random.constant (Err err)
             )
-            (Random.constant g1)
+            g1
 
 
 filterRule : Event -> List Rule -> List Rule
@@ -230,7 +256,10 @@ getCurrent trigger game =
                 |> Player.idsOrderedByPoints
 
 
-applyCommand : { command : Command, current : Pointer Player, amountSpent : Int } -> Game -> Generator Game
+applyCommand :
+    { command : Command, current : Pointer Player, amountSpent : Int }
+    -> Game
+    -> Result String (Generator Game)
 applyCommand args game =
     let
         playerIdsOrderedByPoints =
@@ -241,7 +270,7 @@ applyCommand args game =
                 |> Player.getPointer { playerId = playerId, current = args.current }
     in
     if game.hasWon /= Nothing then
-        Random.constant game
+        Err <| "The game is over"
 
     else
         case args.command of
@@ -261,8 +290,13 @@ applyCommand args game =
                                             pointer
                                             game
                                     )
+                                |> Ok
                         )
-                    |> Maybe.withDefault (Random.constant game)
+                    |> Maybe.withDefault
+                        ("could not find "
+                            ++ Player.toString playerId
+                            |> Err
+                        )
 
             AddTokens amount playerId ->
                 getPlayerId playerId
@@ -280,8 +314,13 @@ applyCommand args game =
                                             pointer
                                             game
                                     )
+                                |> Ok
                         )
-                    |> Maybe.withDefault (Random.constant game)
+                    |> Maybe.withDefault
+                        ("could not find "
+                            ++ Player.toString playerId
+                            |> Err
+                        )
 
             SwapPointsWith pId1 pId2 ->
                 let
@@ -310,17 +349,25 @@ applyCommand args game =
                                     |> Pointer.update key1 (updateFun p2)
                                     |> Pointer.update key2 (updateFun p1)
                         }
+                            |> Random.constant
+                            |> Ok
                     )
                     player1
                     player2
                     pointer1
                     pointer2
-                    |> Maybe.withDefault game
-                    |> Random.constant
+                    |> Maybe.withDefault
+                        ("could not find either "
+                            ++ Player.toString pId1
+                            ++ " or "
+                            ++ Player.toString pId2
+                            |> Err
+                        )
 
             Win playerId ->
                 { game | hasWon = getPlayerId playerId }
                     |> Random.constant
+                    |> Ok
 
 
 mapPlayer : (Player -> Player) -> Pointer Player -> Game -> Game
@@ -329,3 +376,13 @@ mapPlayer fun pointer game =
         | players =
             game.players |> Pointer.update pointer (Maybe.map fun)
     }
+
+
+resultRandMap : Result b (Generator a) -> Generator (Result b a)
+resultRandMap result =
+    case result of
+        Err err ->
+            Random.constant (Err err)
+
+        Ok rand ->
+            rand |> Random.map Ok

@@ -1,4 +1,4 @@
-module Data.Game.Player exposing (Player, PlayerId(..), getPointer, idsOrderedByPoints, new)
+module Data.Game.Player exposing (Player, PlayerId(..), getPointer, idsOrderedByPoints, new, toString)
 
 import Array
 import Data.Game.Pointer as Pointer exposing (Pointer)
@@ -16,6 +16,26 @@ type PlayerId
     = Current
     | Relative Int
     | Highest
+
+
+toString : PlayerId -> String
+toString playerId =
+    case playerId of
+        Current ->
+            "you"
+
+        Relative int ->
+            if int == 0 then
+                toString Current
+
+            else if int > 0 then
+                "the " ++ String.fromInt int ++ ". higher player"
+
+            else
+                "the " ++ String.fromInt int ++ ". lower player"
+
+        Highest ->
+            "the highest player"
 
 
 new : Player
