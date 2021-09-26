@@ -1,4 +1,4 @@
-module Pages.Game exposing (..)
+module Pages.Game exposing (Model, Msg(..), page)
 
 import Bridge exposing (..)
 import Config.View
@@ -10,7 +10,7 @@ import Effect exposing (Effect)
 import Element exposing (Element)
 import Element.Border as Border
 import Element.Input as Input
-import Gen.Params.Profile.Id_ exposing (Params)
+import Gen.Params.Game exposing (Params)
 import Gen.Route exposing (Route)
 import Html exposing (..)
 import Page
@@ -19,21 +19,23 @@ import Shared
 import View exposing (View)
 import View.Color as Color
 import View.NotFound
+import View.Profile
 import View.Rule as Rule
 import Widget.Material as Material
 import Widget.Material.Typography as Typography
 
 
 type alias Model =
-    { profiles : Response (List Profile)
+    { profiles : List Profile
     , rules : Response (List Rule)
     }
 
 
 type Msg
-    = GotProfiles (Response (List Profile))
+    = GotProfiles (List Profile)
     | GotRules (Response (List Rule))
     | RequestedRouteChange Route
+    | TriggeredRule { rule : Pointer Rule, amountSpent : Int }
 
 
 page : Shared.Model -> Request.With Params -> Page.With Model Msg
@@ -47,16 +49,12 @@ page shared req =
 
 
 init : Shared.Model -> Request.With Params -> ( Model, Effect Msg )
-init _ { params } =
-    let
-        id =
-            params.id |> String.toInt |> Maybe.withDefault -1
-    in
-    ( { profiles = Data.Response.Loading
+init _ {} =
+    ( { profiles = []
       , rules = Data.Response.Loading
       }
     , Cmd.batch
-        [ ProfileGet_Profile__Id_ { id = id } |> sendToBackend
+        [ GameGet_Profiles |> sendToBackend
         , DiscussionList_Username_ |> sendToBackend
         ]
         |> Effect.fromCmd
@@ -66,8 +64,8 @@ init _ { params } =
 update : Shared.Model -> Msg -> Model -> ( Model, Effect Msg )
 update _ msg model =
     case msg of
-        GotProfile profile ->
-            ( { model | profile = profile }
+        GotProfiles profiles ->
+            ( { model | profiles = profiles }
             , Effect.none
             )
 
@@ -82,9 +80,6 @@ update _ msg model =
                 |> sendToBackend
                 |> Effect.fromCmd
             )
-
-        AmountChanged string ->
-            ( { model | amountToSpend = string }, Effect.none )
 
         RequestedRouteChange route ->
             ( model, Shared.RequestedRouteChange route |> Effect.fromShared )
@@ -101,15 +96,56 @@ subscriptions _ =
 
 view : Shared.Model -> Model -> View Msg
 view shared model =
-    { title = "Profile"
+    { title = "Game"
     , body =
-        case model.profile of
-            Data.Response.Success profile ->
-                viewProfile shared profile model
-
-            Data.Response.Failure _ ->
-                View.NotFound.view RequestedRouteChange
+        [ case model.rules of
+            Data.Response.Success rules ->
+                [ "Rules" |> Element.text |> Element.el Typography.h2
+                , rules
+                    |> List.map Rule.staticView
+                    |> Element.column [ Element.width Element.fill, Element.spacing Config.View.spacing ]
+                ]
+                    |> Element.column
+                        (Material.cardAttributes Color.palette
+                            ++ [ Border.rounded Config.View.rounded
+                               , Element.padding Config.View.padding
+                               , Element.spacing (2 * Config.View.spacing)
+                               , Element.width <| Element.maximum Config.View.maxWidth <| Element.fill
+                               , Element.centerX
+                               , Element.centerY
+                               ]
+                        )
 
             _ ->
                 Element.none
+        , [ "Users" |> Element.text |> Element.el Typography.h2
+          , model.profiles
+                |> View.Profile.list
+                    { currentUser = shared.user
+                    , rules =
+                        case model.rules of
+                            Data.Response.Success list ->
+                                list
+
+                            _ ->
+                                []
+                    }
+          ]
+            |> Element.column
+                (Material.cardAttributes Color.palette
+                    ++ [ Border.rounded Config.View.rounded
+                       , Element.padding Config.View.padding
+                       , Element.spacing (2 * Config.View.spacing)
+                       , Element.width <| Element.maximum Config.View.maxWidth <| Element.fill
+                       , Element.centerX
+                       , Element.centerY
+                       ]
+                )
+        ]
+            |> Element.column
+                [ Element.width <| Element.maximum Config.View.maxWidth <| Element.fill
+                , Element.centerX
+                , Element.centerY
+                , Element.spacing Config.View.spacing
+                ]
     }

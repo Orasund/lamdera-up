@@ -33,6 +33,7 @@ type ToBackend
     | DiscussionCommentCreate_Discussion__Slug_ { discussionSlug : String, comment : { body : String } }
     | DiscussionCommentDelete_Discussion__Slug_ { discussionSlug : String, commentId : Int }
     | DiscussionList_Discussion__Slug_ { page : Int }
+    | GameGet_Profiles
     | ProfileGet_Profile__Id_ { id : Int }
     | UserAuthentication_Login { params : { email : String, password : String } }
     | UserRegistration_Register { params : { username : String, email : String, password : String } }

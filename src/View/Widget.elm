@@ -1,7 +1,6 @@
 module View.Widget exposing (..)
 
 import Element exposing (Element)
-import Material.Icons as Icons
 import Material.Icons.Types exposing (Coloring(..), Icon)
 import View.Color as Color
 import Widget

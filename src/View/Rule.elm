@@ -1,4 +1,4 @@
-module View.Rule exposing (view)
+module View.Rule exposing (staticView, view)
 
 import Config.View
 import Data.Game exposing (Rule, Trigger(..))
@@ -7,6 +7,36 @@ import Element exposing (Element)
 import View.Color as Color
 import Widget
 import Widget.Material as Material
+
+
+staticView :
+    Rule
+    -> Element msg
+staticView rule =
+    (case rule.trigger of
+        TokensSpend amount ->
+            "Costs " ++ String.fromInt amount ++ " Token(s)"
+
+        SomeTokensSpend ->
+            "Costs some Token(s)"
+
+        EveryWeek n ->
+            "Every "
+                ++ (case n of
+                        1 ->
+                            ""
+
+                        _ ->
+                            String.fromInt n ++ "."
+                   )
+                ++ "week"
+
+        EveryDay ->
+            "Every day"
+    )
+        ++ ": "
+        ++ rule.description
+        |> Element.text
 
 
 view :

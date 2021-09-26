@@ -1,6 +1,7 @@
 module Gen.Model exposing (Model(..))
 
 import Gen.Params.Editor
+import Gen.Params.Game
 import Gen.Params.Home_
 import Gen.Params.Login
 import Gen.Params.NotFound
@@ -10,6 +11,7 @@ import Gen.Params.Discussion.Slug_
 import Gen.Params.Editor.DiscussionSlug_
 import Gen.Params.Profile.Id_
 import Pages.Editor
+import Pages.Game
 import Pages.Home_
 import Pages.Login
 import Pages.NotFound
@@ -23,6 +25,7 @@ import Pages.Profile.Id_
 type Model
     = Redirecting_
     | Editor Gen.Params.Editor.Params Pages.Editor.Model
+    | Game Gen.Params.Game.Params Pages.Game.Model
     | Home_ Gen.Params.Home_.Params Pages.Home_.Model
     | Login Gen.Params.Login.Params Pages.Login.Model
     | NotFound Gen.Params.NotFound.Params Pages.NotFound.Model

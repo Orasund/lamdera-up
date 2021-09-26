@@ -2,7 +2,7 @@ module Pages.Discussion.Slug_ exposing (Model, Msg(..), page)
 
 import Bridge exposing (..)
 import Config.View
-import Data.Discussion exposing (Discussion, Slug)
+import Data.Discussion exposing (Discussion)
 import Data.Discussion.Comment exposing (Comment)
 import Data.Profile exposing (Profile)
 import Data.Response exposing (Response)

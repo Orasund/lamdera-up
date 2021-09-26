@@ -8,7 +8,6 @@ import Html exposing (..)
 import View.Color as Color
 import Widget
 import Widget.Material as Material
-import Widget.Material.Typography as Typography
 
 
 view :
@@ -27,6 +26,7 @@ view options =
             case options.user of
                 Just user ->
                     [ ( "Profile", Route.Profile__Id_ { id = user.id |> String.fromInt } )
+                    , ( "Game", Route.Game )
                     ]
 
                 Nothing ->

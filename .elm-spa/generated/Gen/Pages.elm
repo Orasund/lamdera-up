@@ -4,6 +4,7 @@ import Browser.Navigation exposing (Key)
 import Effect exposing (Effect)
 import ElmSpa.Page
 import Gen.Params.Editor
+import Gen.Params.Game
 import Gen.Params.Home_
 import Gen.Params.Login
 import Gen.Params.NotFound
@@ -17,6 +18,7 @@ import Gen.Msg as Msg
 import Gen.Route as Route exposing (Route)
 import Page exposing (Page)
 import Pages.Editor
+import Pages.Game
 import Pages.Home_
 import Pages.Login
 import Pages.NotFound
@@ -45,6 +47,9 @@ init route =
     case route of
         Route.Editor ->
             pages.editor.init ()
+    
+        Route.Game ->
+            pages.game.init ()
     
         Route.Home_ ->
             pages.home_.init ()
@@ -76,6 +81,9 @@ update msg_ model_ =
     case ( msg_, model_ ) of
         ( Msg.Editor msg, Model.Editor params model ) ->
             pages.editor.update params msg model
+    
+        ( Msg.Game msg, Model.Game params model ) ->
+            pages.game.update params msg model
     
         ( Msg.Home_ msg, Model.Home_ params model ) ->
             pages.home_.update params msg model
@@ -114,6 +122,9 @@ view model_ =
         Model.Editor params model ->
             pages.editor.view params model
     
+        Model.Game params model ->
+            pages.game.view params model
+    
         Model.Home_ params model ->
             pages.home_.view params model
     
@@ -148,6 +159,9 @@ subscriptions model_ =
         Model.Editor params model ->
             pages.editor.subscriptions params model
     
+        Model.Game params model ->
+            pages.game.subscriptions params model
+    
         Model.Home_ params model ->
             pages.home_.subscriptions params model
     
@@ -179,6 +193,7 @@ subscriptions model_ =
 
 pages :
     { editor : Bundle Gen.Params.Editor.Params Pages.Editor.Model Pages.Editor.Msg
+    , game : Bundle Gen.Params.Game.Params Pages.Game.Model Pages.Game.Msg
     , home_ : Bundle Gen.Params.Home_.Params Pages.Home_.Model Pages.Home_.Msg
     , login : Bundle Gen.Params.Login.Params Pages.Login.Model Pages.Login.Msg
     , notFound : Bundle Gen.Params.NotFound.Params Pages.NotFound.Model Pages.NotFound.Msg
@@ -190,6 +205,7 @@ pages :
     }
 pages =
     { editor = bundle Pages.Editor.page Model.Editor Msg.Editor
+    , game = bundle Pages.Game.page Model.Game Msg.Game
     , home_ = bundle Pages.Home_.page Model.Home_ Msg.Home_
     , login = bundle Pages.Login.page Model.Login Msg.Login
     , notFound = bundle Pages.NotFound.page Model.NotFound Msg.NotFound

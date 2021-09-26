@@ -16,6 +16,7 @@ import List.Extra as List
 import Pages.Discussion.Slug_
 import Pages.Editor
 import Pages.Editor.DiscussionSlug_
+import Pages.Game
 import Pages.Home_
 import Pages.Login
 import Pages.Profile.Id_
@@ -271,7 +272,7 @@ updateFromFrontend sessionId clientId msg model =
                                                 |> Observer.updatedGame { userFull = userFull, clientId = clientId }
                                             )
 
-                                        Err err ->
+                                        Err _ ->
                                             ( m
                                             , Cmd.none
                                             )
@@ -326,12 +327,22 @@ updateFromFrontend sessionId clientId msg model =
             send (PageMsg (Gen.Msg.Home_ (Pages.Home_.GotDiscussions (Success discussionList))))
 
         DiscussionList_Username_ ->
-            model.game.rules
-                |> Success
-                |> Pages.Profile.Id_.GotRules
-                |> Gen.Msg.Profile__Id_
-                |> PageMsg
-                |> send
+            ( model
+            , [ model.game.rules
+                    |> Success
+                    |> Pages.Profile.Id_.GotRules
+                    |> Gen.Msg.Profile__Id_
+                    |> PageMsg
+                    |> sendToFrontend clientId
+              , model.game.rules
+                    |> Success
+                    |> Pages.Game.GotRules
+                    |> Gen.Msg.Game
+                    |> PageMsg
+                    |> sendToFrontend clientId
+              ]
+                |> Cmd.batch
+            )
 
         DiscussionGet_Editor__DiscussionSlug_ { slug } ->
             onlyWhenDiscussionOwner slug
@@ -414,6 +425,15 @@ updateFromFrontend sessionId clientId msg model =
             ( { model | comments = newComments }
             , send_ (PageMsg (Gen.Msg.Discussion__Slug_ (Pages.Discussion.Slug_.DeletedComment (Success commentId))))
             )
+
+        GameGet_Profiles ->
+            let
+                res =
+                    model.users
+                        |> Dict.toList
+                        |> List.map (Tuple.second >> User.toProfile model.game)
+            in
+            send (PageMsg (Gen.Msg.Game (Pages.Game.GotProfiles res)))
 
         ProfileGet_Profile__Id_ { id } ->
             let

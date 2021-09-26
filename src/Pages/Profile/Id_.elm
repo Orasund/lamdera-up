@@ -19,6 +19,7 @@ import Shared
 import View exposing (View)
 import View.Color as Color
 import View.NotFound
+import View.Profile
 import View.Rule as Rule
 import Widget.Material as Material
 import Widget.Material.Typography as Typography
@@ -119,7 +120,20 @@ view shared model =
     , body =
         case model.profile of
             Data.Response.Success profile ->
-                viewProfile shared profile model
+                profile
+                    |> View.Profile.view
+                        { currentUser = shared.user
+                        , rules =
+                            case model.rules of
+                                Data.Response.Success list ->
+                                    list
+
+                                _ ->
+                                    []
+                        , amountChanged = AmountChanged
+                        , amountToSpend = model.amountToSpend
+                        , triggeredRule = TriggeredRule
+                        }
 
             Data.Response.Failure _ ->
                 View.NotFound.view RequestedRouteChange
@@ -127,86 +141,3 @@ view shared model =
             _ ->
                 Element.none
     }
-
-
-viewProfile : Shared.Model -> Profile -> Model -> Element Msg
-viewProfile shared profile model =
-    let
-        isViewingOwnProfile : Bool
-        isViewingOwnProfile =
-            Maybe.map .username shared.user == Just profile.username
-
-        rules =
-            case model.rules of
-                Data.Response.Success list ->
-                    list
-
-                _ ->
-                    []
-
-        tokens =
-            shared.user
-                |> Maybe.map .tokens
-                |> Maybe.withDefault 0
-    in
-    [ [ Element.text profile.username |> Element.el Typography.h2
-      , profile.bio |> Maybe.map Element.text |> Maybe.withDefault Element.none
-      , Element.text <| "Points: " ++ String.fromInt profile.points
-      , if isViewingOwnProfile then
-            Element.text <| "Tokens: " ++ String.fromInt tokens
-
-        else
-            Element.none
-      ]
-        |> Element.column
-            [ Element.spacing Config.View.spacing
-            ]
-    , if isViewingOwnProfile then
-        (([ Element.text "Actions" |> Element.el Typography.h4
-          , [ Element.text "Spend "
-            , Input.text
-                (Material.textInputAttributes Color.palette
-                    ++ [ Element.width <| Element.px 64 ]
-                )
-                { text = model.amountToSpend
-                , placeholder = Nothing
-                , label = "Amount to spend" |> Input.labelHidden
-                , onChange = AmountChanged
-                }
-            , Element.text " Token(s)"
-            ]
-                |> Element.row [ Element.width Element.shrink ]
-          ]
-            |> Element.row [ Element.spaceEvenly, Element.width Element.fill ]
-         )
-            :: (rules
-                    |> List.map
-                        (Rule.view
-                            { triggerRule = TriggeredRule
-                            , amountSpent =
-                                model.amountToSpend
-                                    |> String.toInt
-                                    |> Maybe.withDefault 0
-                            , tokens = tokens
-                            }
-                        )
-               )
-        )
-            |> Element.column
-                [ Element.spacing Config.View.spacing
-                , Element.width Element.fill
-                ]
-
-      else
-        Element.none
-    ]
-        |> Element.column
-            (Material.cardAttributes Color.palette
-                ++ [ Border.rounded Config.View.rounded
-                   , Element.padding Config.View.padding
-                   , Element.spacing (2 * Config.View.spacing)
-                   , Element.width <| Element.maximum Config.View.maxWidth <| Element.fill
-                   , Element.centerX
-                   , Element.centerY
-                   ]
-            )

@@ -1,6 +1,7 @@
 module Gen.Msg exposing (Msg(..))
 
 import Gen.Params.Editor
+import Gen.Params.Game
 import Gen.Params.Home_
 import Gen.Params.Login
 import Gen.Params.NotFound
@@ -10,6 +11,7 @@ import Gen.Params.Discussion.Slug_
 import Gen.Params.Editor.DiscussionSlug_
 import Gen.Params.Profile.Id_
 import Pages.Editor
+import Pages.Game
 import Pages.Home_
 import Pages.Login
 import Pages.NotFound
@@ -22,6 +24,7 @@ import Pages.Profile.Id_
 
 type Msg
     = Editor Pages.Editor.Msg
+    | Game Pages.Game.Msg
     | Home_ Pages.Home_.Msg
     | Login Pages.Login.Msg
     | NotFound Pages.NotFound.Msg

@@ -3,7 +3,7 @@ module Pages.Home_ exposing (Model, Msg(..), page)
 import Bridge exposing (..)
 import Data.Discussion exposing (Discussion)
 import Data.Response exposing (Response)
-import Data.User exposing (User)
+import Data.User
 import Effect exposing (Effect)
 import Element
 import Gen.Route as Route exposing (Route(..))
@@ -37,7 +37,7 @@ type alias Model =
 
 
 init : Shared.Model -> ( Model, Effect Msg )
-init shared =
+init _ =
     let
         model : Model
         model =
@@ -65,12 +65,8 @@ type Msg
     | RequestedRouteChange Route
 
 
-type alias Tag =
-    String
-
-
 update : Shared.Model -> Msg -> Model -> ( Model, Effect Msg )
-update shared msg model =
+update _ msg model =
     case msg of
         GotDiscussions listing ->
             ( { model | listing = listing }

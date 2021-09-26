@@ -1,6 +1,6 @@
 module Data.Game.Pointer exposing (Pointer, find, fromInt, get, update)
 
-import Array exposing (Array)
+import Array
 import Dict exposing (Dict)
 import List.Extra as List
 

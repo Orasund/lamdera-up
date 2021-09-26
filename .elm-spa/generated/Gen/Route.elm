@@ -5,6 +5,7 @@ module Gen.Route exposing
     )
 
 import Gen.Params.Editor
+import Gen.Params.Game
 import Gen.Params.Home_
 import Gen.Params.Login
 import Gen.Params.NotFound
@@ -19,6 +20,7 @@ import Url.Parser as Parser exposing ((</>), Parser)
 
 type Route
     = Editor
+    | Game
     | Home_
     | Login
     | NotFound
@@ -38,6 +40,7 @@ routes : List (Parser (Route -> a) a)
 routes =
     [ Parser.map Home_ Gen.Params.Home_.parser
     , Parser.map Editor Gen.Params.Editor.parser
+    , Parser.map Game Gen.Params.Game.parser
     , Parser.map Login Gen.Params.Login.parser
     , Parser.map NotFound Gen.Params.NotFound.parser
     , Parser.map Register Gen.Params.Register.parser
@@ -58,6 +61,9 @@ toHref route =
     case route of
         Editor ->
             joinAsHref [ "editor" ]
+    
+        Game ->
+            joinAsHref [ "game" ]
     
         Home_ ->
             joinAsHref []
